@@ -10,7 +10,7 @@
 clear; close all;
 
 %% Options
-Naxons      = 6;                    % Number of different templates
+Naxons      = 5;                    % Number of different templates
 SNR         = 20;                   % Initial signal to noise ratio (it will change with drift)
 growth      = [(1.1 + (2 - 1.1) * rand) (0.8 + (1.2 - 0.8) * rand)]; % [1.9 1.1];         % Growth of: [<spamp> <noise>]
 total_time  = 2000;                 % Seconds
@@ -25,16 +25,12 @@ has_noise   = true;
 pre_noise   = true;                 % Append period of just noise at the start
 do_filter   = true;                 % Bandpass filter the signal
 passband    = [40 1200];%[80, 600]; % Passband
-PLOT        = true;
+PLOT        = false;
 
 %% Events
 evnts.inflammation_onset   = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % High frequency at time
 evnts.inflammation_tau     = 5e-3*fs;  % Time constant for increased spike rate to decay to spontaneous activity
 evnts.inflammation_axons   = floor(0 + ((Naxons/2 - 0) * rand)); % Number of inflamed axons (increase the spike rate).
-% Fix the size of no. of inflamed is larger than Naxons
-if evnts.inflammation_axons > Naxons
-   evnts.inflammation_axons = Naxons;
-end
 
 evnts.amplitude_nat_onset  = 500*fs;   % Change of amplitude in just some of axons
 evnts.amplitude_nat_axons  = 0;        % Change of amplitude in just a couple of axons
@@ -43,8 +39,8 @@ evnts.amplitude_dist_onset = round((total_time/4 + ((total_time*3/4) - (total_ti
 evnts.amplitude_dist_value = 0.5 + (1.5 - 0.5) * rand;      % Value of the new amplitude multiplier
 evnts.amplitude_dist_prob  = 0.2; % Probability of having a change in the amplitude
 
-evnts.prob_start  = floor(0 + ((Naxons/2 - 0) * rand)); %floor(Naxons/4);   % (Recruited) Number of axons that don't start at the beginning. They will randomly start somewhere along the recording.
-evnts.prob_end    = floor(0 + ((Naxons/2 - 0) * rand)); %floor(Naxons/4);   % (Dismissed) Number of axons that don't last the whole recording. They will randomly end somewhere along the recording.
+evnts.prob_start  = floor(0 + ((Naxons/2 - 0) * rand)); % (Recruited) Number of axons that don't start at the beginning. They will randomly start somewhere along the recording.
+evnts.prob_end    = floor(0 + ((Naxons/2 - 0) * rand)); % (Dismissed) Number of axons that don't last the whole recording. They will randomly end somewhere along the recording.
 
 %% Run
 % Load the templates matrix
@@ -164,10 +160,19 @@ if s.bytes > 2e9
    fprintf('\tThe file is too large, only the final recording will be saved, not the per-axon information.\n');
 end
 
-[file,path] = uiputfile(['simulations' filesep 'sim.mat'],'Save file name');
-if file
-   file_name = [path filesep file];
-   save(file_name, 'vsim');
-else
-   fprintf('\tUser didn''t chose a file location. The simulation wasn''t saved.\n');
+% [file,path] = uiputfile(['simulations' filesep 'sim.mat'],'Save file name');
+% if file
+%    file_name = [path filesep file];
+%    save(file_name, 'vsim');
+% else
+%    fprintf('\tUser didn''t chose a file location. The simulation wasn''t saved.\n');
+% end
+sufix = 0;
+file = 'sim';
+valid_file = file;
+while exist([valid_file,'.mat'], 'file')
+   sufix = sufix + 1;
+   valid_file = [file num2str(sufix)];
 end
+file = valid_file;
+save(file, 'vsim');
