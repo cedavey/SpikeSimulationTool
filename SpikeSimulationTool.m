@@ -21,6 +21,8 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
+
+function SpikeSimulationTool(varargin)
 %% Options
 Naxons      = 5;                    % Number of different templates
 SNR         = 20;                   % Initial signal to noise ratio (it will change with drift)
@@ -38,6 +40,24 @@ pre_noise   = true;                 % Append period of just noise at the start
 do_filter   = true;                 % Bandpass filter the signal
 passband    = [40 1200];%[80, 600]; % Passband
 PLOT        = false;
+
+if nargin >= 1
+   data = varargin{1};
+   
+   Naxons = data.Naxons;
+   SNR = data.SNR;
+   total_time = data.total_time;
+   fs = data.fs;
+   sr = data.sr;
+   overlap = data.overlap;
+   rpt_temp = data.rpt_temp;
+   has_drift = data.has_drift;
+   has_noise = data.has_noise;
+   pre_noise = data.pre_noise;
+   do_filter = data.do_filter;
+   passband = data.passband;
+   PLOT = data.PLOT;
+end
 
 %% Events
 evnts.inflammation_onset   = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % High frequency at time
