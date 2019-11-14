@@ -47,6 +47,7 @@ if nargin >= 1
    Naxons = data.Naxons;
    SNR = data.SNR;
    total_time = data.total_time;
+   pw_locs     = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs); % Locations of the change of drift. Only controls the growth of the spike amplitudes, not noise
    fs = data.fs;
    sr = data.sr;
    overlap = data.overlap;
@@ -115,7 +116,16 @@ end
 
 if do_filter && has_noise
    % Lowpass filter the signal
-   v = bandpass(v, passband, fs);
+   try
+    v = bandpass(v, passband, fs);
+   catch E
+       if strcmp('MATLAB:UndefinedFunction', E.identifier)
+           str = sprintf('\tYou are using a Matlab version prior to 2018a, the simulation won''t be filtered.\n');
+           cprintf('Errors', str);
+       else
+           rethrow(E);
+       end
+   end
 end
 
 %% Format recording for SpikeExtractionTool
@@ -192,19 +202,19 @@ if s.bytes > 2e9
    fprintf('\tThe file is too large, only the final recording will be saved, not the per-axon information.\n');
 end
 
-% [file,path] = uiputfile(['simulations' filesep 'sim.mat'],'Save file name');
-% if file
-%    file_name = [path filesep file];
-%    save(file_name, 'vsim');
-% else
-%    fprintf('\tUser didn''t chose a file location. The simulation wasn''t saved.\n');
-% end
-sufix = 0;
-file = 'sim';
-valid_file = file;
-while exist([valid_file,'.mat'], 'file')
-   sufix = sufix + 1;
-   valid_file = [file num2str(sufix)];
+[file,path] = uiputfile(['simulations' filesep 'sim.mat'],'Save file name');
+if file
+   file_name = [path filesep file];
+   save(file_name, 'vsim');
+else
+   fprintf('\tUser didn''t chose a file location. The simulation wasn''t saved.\n');
 end
-file = valid_file;
-save(file, 'vsim');
+% sufix = 0;
+% file = 'sim';
+% valid_file = file;
+% while exist([valid_file,'.mat'], 'file')
+%    sufix = sufix + 1;
+%    valid_file = [file num2str(sufix)];
+% end
+% file = valid_file;
+% save(file, 'vsim');
