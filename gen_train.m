@@ -125,6 +125,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    spks = zeros(duration, Naxons);
    locs = cell(Naxons, 1);
    max_spike_num = ceil(max(opts.SpikeRate(:)*duration*dt)); % Maximum number of spikes
+   rest = round(100e-3/dt);% Refractory period in seconds
    
    % Output variable
    report = struct;
@@ -181,8 +182,9 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       currentTemplate = templates_(i); % Randomly pick 1 of the templates to assign to this axon.
       isi = random('Exponential', fs/opts.SpikeRate(i), [3 * max_spike_num 1]);
       isi = round(isi);
-      % Remove isi that are closer than the duration of a spike
-      isi(isi < size(templates,1)) = size(templates,1);
+      % Remove isi that are closer than the duration of a spike or
+      % refractory period
+      isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = ceil(size(templates,1) + rest);
       
       % If it doesn't get affected by inflammation, it's firing rate
       % remains constant. If it does, we will remove the isi's who's cumsum
@@ -195,7 +197,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
          sr = 9 * exp(-(1:numel(isi)-inf_sample)/(tau)) + 1; % Get an exponential from 10 to 1 with time constant tau
          isi(inf_sample + 1:end) = isi(inf_sample + 1:end)./sr';
          % Remove isi that are closer than the duration of a spike
-         isi(isi < size(templates,1)) = size(templates,1);
+         isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = size(templates,1) + rest; % isi(isi < size(templates,1)) = size(templates,1);
          isi = ceil(isi);
       end
         
