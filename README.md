@@ -1,11 +1,9 @@
 # SpikeSimulationTool
  Single electrode extracellular recording simulator
 
------------ Usage -----------
+Usage:
 We have implemented a simple GUI (SST.m) to set the simulation parameters.
-
 Run the GUI (SST.m) from within the SpikeSimulationTool directory, or add the folder to the Matlab Path, then run SST.m.
------------------------------
 
 Copyright 2019 Artemio Soto-Breceda
 
