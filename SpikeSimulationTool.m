@@ -77,7 +77,7 @@ evnts.prob_end    = floor(0 + ((Naxons/2 - 0) * rand)); % (Dismissed) Number of 
 
 %% Run
 % Load the templates matrix
-load(['.\templates' filesep 'templates4']);
+load(['.' filesep 'templates' filesep 'templates4']);
 
 % Normalize templates amplitude, max peak = 1
 for i =1:size(d,2)
