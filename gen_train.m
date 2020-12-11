@@ -56,7 +56,7 @@
 function [v, vv, report] = gen_train(templates, Naxons, fs, duration, varargin)
    % Default inputs
    opts.SpikeRate = 100;
-   opts.Overlap = true;
+   opts.Overlap   = true;
    opts.Recruited = 0;
    opts.Dismissed = 0;
    
@@ -108,7 +108,7 @@ function [v, vv, report] = gen_train(templates, Naxons, fs, duration, varargin)
    
    % Return information about the simulation
    report = struct;
-   report.opts = opts;
+   report.opts    = opts;
    report.recruit = st_time;
    report.dismiss = end_time;
    % Copy the report from 'rr' ('run_simulation' function) to 'report'
@@ -119,13 +119,13 @@ end
 
 % Run the simulation. Returns spike trains per axon in vv.
 function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,amplitudes ,st_time , end_time)
-   dt = 1/fs;
-   T = dt:dt:duration*dt;
-   vv = zeros(duration, Naxons);
-   spks = zeros(duration, Naxons);
-   locs = cell(Naxons, 1);
+   dt            = 1/fs;
+   T             = dt:dt:duration*dt;
+   vv            = zeros(duration, Naxons);
+   spks          = zeros(duration, Naxons);
+   locs          = cell(Naxons, 1);
    max_spike_num = ceil(max(opts.SpikeRate(:)*duration*dt)); % Maximum number of spikes
-   rest = round(100e-3/dt);% Refractory period in seconds
+   rest          = round(100e-3/dt);% Refractory period in seconds
    
    % Output variable
    report = struct;
