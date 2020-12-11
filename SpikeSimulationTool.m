@@ -22,7 +22,7 @@
 % limitations under the License.
 
 
-function SpikeSimulationTool(varargin)
+function vsim = SpikeSimulationTool(varargin)
 %% Options
 Naxons      = 5;                    % Number of different templates
 SNR         = 20;                   % Initial signal to noise ratio (it will change with drift)
@@ -79,7 +79,7 @@ evnts.prob_end             = floor(0 + ((Naxons/2 - 0) * rand)); % (Dismissed) N
 
 %% Run
 % Load the templates matrix
-d = load(['.' filesep 'templates' filesep 'templates4']);
+load(['.' filesep 'templates' filesep 'templates4']);
 
 % Normalize templates amplitude, max peak = 1
 for i =1:size(d,2)
