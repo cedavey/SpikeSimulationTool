@@ -22,11 +22,11 @@
 % limitations under the License.
 
 
-function SpikeSimulationTool(varargin)
+function vsim = SpikeSimulationTool(varargin)
 %% Options
 Naxons      = 5;                    % Number of different templates
 SNR         = 20;                   % Initial signal to noise ratio (it will change with drift)
-growth      = [(1.1 + (2 - 1.1) * rand) (0.8 + (1.2 - 0.8) * rand)]; % [1.9 1.1];         % Growth of: [<spamp> <noise>]
+growth      = [(1.1 + (2 - 1.1) * rand) (0.8 + (1.2 - 0.8) * rand)]; % [1.9 1.1];   % Growth of: [<spamp> <noise>]
 total_time  = 2000;                 % Seconds
 fs          = 5000;                 % Sampling rate (current template file has this sampling rate, so it should stay like this unless the templates are fixed)
 sr          = randi(10,1,Naxons)/2; % Spike rate
@@ -42,23 +42,24 @@ passband    = [40 1200];%[80, 600]; % Passband
 PLOT        = false;
 
 if nargin >= 1
-   data = varargin{1};
+   data       = varargin{1};
    
-   Naxons = data.Naxons;
-   SNR = data.SNR;
+   Naxons     = data.Naxons;
+   SNR        = data.SNR;
    total_time = data.total_time;
-   pw_locs     = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs); % Locations of the change of drift. Only controls the growth of the spike amplitudes, not noise
-   fs = data.fs;
-   sr = data.sr;
-   overlap = data.overlap;
-   rpt_temp = data.rpt_temp;
-   has_drift = data.has_drift;
-   has_noise = data.has_noise;
-   pre_noise = data.pre_noise;
-   do_filter = data.do_filter;
-   passband = data.passband;
-   PLOT = data.PLOT;
+   pw_locs    = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs); % Locations of the change of drift. Only controls the growth of the spike amplitudes, not noise
+   fs         = data.fs;
+   sr         = data.sr;
+   overlap    = data.overlap;
+   rpt_temp   = data.rpt_temp;
+   has_drift  = data.has_drift;
+   has_noise  = data.has_noise;
+   pre_noise  = data.pre_noise;
+   do_filter  = data.do_filter;
+   passband   = data.passband;
+   PLOT       = data.PLOT;
 end
+
 
 %% Events
 evnts.inflammation_onset   = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % High frequency at time
@@ -72,8 +73,9 @@ evnts.amplitude_dist_onset = round((total_time/4 + ((total_time*3/4) - (total_ti
 evnts.amplitude_dist_value = 0.5 + (1.5 - 0.5) * rand;      % Value of the new amplitude multiplier
 evnts.amplitude_dist_prob  = 0.2; % Probability of having a change in the amplitude
 
-evnts.prob_start  = floor(0 + ((Naxons/2 - 0) * rand)); % (Recruited) Number of axons that don't start at the beginning. They will randomly start somewhere along the recording.
-evnts.prob_end    = floor(0 + ((Naxons/2 - 0) * rand)); % (Dismissed) Number of axons that don't last the whole recording. They will randomly end somewhere along the recording.
+evnts.prob_start           = floor(0 + ((Naxons/2 - 0) * rand)); % (Recruited) Number of axons that don't start at the beginning. They will randomly start somewhere along the recording.
+evnts.prob_end             = floor(0 + ((Naxons/2 - 0) * rand)); % (Dismissed) Number of axons that don't last the whole recording. They will randomly end somewhere along the recording.
+
 
 %% Run
 % Load the templates matrix
@@ -84,15 +86,19 @@ for i =1:size(d,2)
    dd = d(:,i);
    max_d = max(d);
    dd = dd./max_d(i);
-   d(:,i) = dd; %#ok<SAGROW>
+   d(:,i) = dd;
 end
 
 dt = 1/fs;
 try % Generate a train of extracellular spikes. There is no noise
-   [v, vv, report] = gen_train(d, Naxons, fs, total_time/dt, 'SpikeRate',...
-      sr, 'Overlap', overlap, 'Recruited', evnts.prob_start,...
-      'Dismissed', evnts.prob_end, 'Events', evnts, 'RepeatTemplates',...
-      rpt_temp);
+   [v, vv, report] = gen_train(d, Naxons, fs, total_time/dt,       ...
+                               'SpikeRate',       sr,              ...
+                               'Overlap',         overlap,         ...
+                               'Recruited',       evnts.prob_start,...
+                               'Dismissed',       evnts.prob_end,  ...
+                               'Events',          evnts,           ...
+                               'RepeatTemplates', rpt_temp         ...
+                               );
 catch E
    if strcmp('Manually stopped', E.message)
       fprintf(2,'\tManually stopped\n');
@@ -105,13 +111,23 @@ end
 % Add drift
 if has_drift
    % Add the noise and drift
-   v = add_drift(v, 'SNR', SNR, 'Noise', has_noise, 'Growth', growth,...
-      'PrecedingNoise', pre_noise, 'Linear', false,...
-      'PwLocs', pw_locs, 'PwGrowth', pw_grow);
+   v = add_drift(v,                           ...
+                 'SNR',            SNR,       ...
+                 'Noise',          has_noise, ...
+                 'Growth',         growth,    ...
+                 'PrecedingNoise', pre_noise, ...
+                 'Linear',         false,     ...
+                 'PwLocs',         pw_locs,   ...
+                 'PwGrowth',       pw_grow    ...
+                 );
 elseif has_noise
    % Add only noise
-   v = add_drift(v, 'SNR', SNR, 'Noise', has_noise, 'Growth', [1 1],...
-      'PrecedingNoise', false);
+   v = add_drift(v,                           ...
+                 'SNR',            SNR,       ...
+                 'Noise',          has_noise, ...
+                 'Growth',         [1 1],     ...
+                 'PrecedingNoise', false      ...
+                 );
 end
 
 if do_filter && has_noise
@@ -128,23 +144,23 @@ if do_filter && has_noise
    end
 end
 
+
 %% Format recording for SpikeExtractionTool
-vsim = struct;
-vsim.type = 'voltage';
-vsim.name = 'vsim';
-vsim.dt = dt;
+vsim        = struct;
+vsim.type   = 'voltage';
+vsim.name   = 'vsim';
+vsim.dt     = dt;
 vsim.params = [];
-vsim.data = v;
-vsim.time = (dt:dt:length(vsim.data)*dt);
-vsim.axons = vv;
+vsim.data   = v;
+vsim.time   = (dt:dt:length(vsim.data)*dt);
+vsim.axons  = vv;
 vsim.report = report;
 % Fix the dimensions if they are wrong
 if size(vsim.data,1) < size(vsim.data,2), vsim.data = vsim.data'; end
 if size(vsim.time,1) < size(vsim.time,2), vsim.time = vsim.time'; end
 
-
+%% Plot Figure
 if PLOT
-%%
    figure;
    plot(vsim.time, vsim.data);
    xlabel('Time (s)');
@@ -180,7 +196,7 @@ if PLOT
    clear vv
 end
 
-% Print report
+%% Print report
 try
    if isfield('inf_time', report)
       fprintf('\tInflammation: %.02f s| Number of inflamed axons: %d\n', report.inf_time * dt, numel(report.inflamed));
