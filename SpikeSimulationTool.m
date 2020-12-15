@@ -212,19 +212,21 @@ end
 %% Save
 % Check size of the variable to save. If it is larger than 2Gb, remove the
 % per axon field: vsim.axons
+
 s = whos('vsim');
 if s.bytes > 2e9
    vsim.axons = [];
    fprintf('\tThe file is too large, only the final recording will be saved, not the per-axon information.\n');
 end
+% 
+% [file,path] = uiputfile(['simulations' filesep 'sim.mat'],'Save file name');
+% if file
+%    file_name = [path filesep file];
+%    save(file_name, 'vsim');
+% else
+%    fprintf('\tUser didn''t chose a file location. The simulation wasn''t saved.\n');
+% end
 
-[file,path] = uiputfile(['simulations' filesep 'sim.mat'],'Save file name');
-if file
-   file_name = [path filesep file];
-   save(file_name, 'vsim');
-else
-   fprintf('\tUser didn''t chose a file location. The simulation wasn''t saved.\n');
-end
 % sufix = 0;
 % file = 'sim';
 % valid_file = file;
