@@ -92,7 +92,7 @@ function [v, vv, report] = gen_train(templates, Naxons, fs, duration, varargin)
    axs = randperm(Naxons, opts.Recruited); % Axons to be recruited along the recording
    st_time(axs) = randi(round(2*duration/3), [opts.Recruited, 1]);
    
-   % Endinf time of each axon
+   % Ending time of each axon
    end_time = duration * ones(size(opts.SpikeRate)); % Sample 1
    axs = randperm(Naxons, opts.Dismissed); % Axons to be dismissed along the recording
    end_time(axs) = randi(round([(duration/3) ,duration]), [opts.Dismissed, 1]);
