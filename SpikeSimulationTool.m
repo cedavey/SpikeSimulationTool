@@ -58,13 +58,19 @@ if nargin >= 1
    do_filter  = data.do_filter;
    passband   = data.passband;
    PLOT       = data.PLOT;
+   
+   inflam     = struct;
+   inflam.num = data.inflamNum;
+   inflam.len = data.inflamLen;
+   inflam.tau = data.inflamTau;
 end
 
 
 %% Events
-evnts.inflammation_onset   = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % High frequency at time
-evnts.inflammation_tau     = 5e-3*fs;  % Time constant for increased spike rate to decay to spontaneous activity
-evnts.inflammation_axons   = floor(0 + ((Naxons/2 - 0) * rand)); % Number of inflamed axons (increase the spike rate).
+%if strcmpi(inflam.true, 'Randomised') == 1
+    evnts.inflammation_onset   = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % High frequency at time
+    evnts.inflammation_tau     = 5e-3*fs;  % Time constant for increased spike rate to decay to spontaneous activity
+    evnts.inflammation_axons   = floor(0 + ((Naxons/2 - 0) * rand)); % Number of inflamed axons (increase the spike rate).
 
 evnts.amplitude_nat_onset  = 500*fs;   % Change of amplitude in just some of axons
 evnts.amplitude_nat_axons  = 0;        % Change of amplitude in just a couple of axons
@@ -169,15 +175,15 @@ if PLOT
    figure;
    vv = vsim.axons;
    max_vv = max(vv);
-   [~, srt] = sort(max_vv, 'descend');
+   [~, vsim.srt] = sort(max_vv, 'descend');
    try
       if ~has_drift || ~pre_noise
-         plot(vsim.time, vv(:,srt));
+         plot(vsim.time, vv(:,vsim.srt));
       else
-         plot(vsim.time(101:end), vv(:,srt));
+         plot(vsim.time(101:end), vv(:,vsim.srt));
       end
    catch
-      plot(vsim.time(101:end), vv(:,srt));
+      plot(vsim.time(101:end), vv(:,vsim.srt));
    end
    xlabel('Time (s)');
    ylabel('Amplitude');
@@ -198,7 +204,7 @@ end
 
 %% Print report
 try
-   if isfield('inf_time', report)
+   if isfield(report, 'inf_time')
       fprintf('\tInflammation: %.02f s| Number of inflamed axons: %d\n', report.inf_time * dt, numel(report.inflamed));
    else
       fprintf('\tNumber of inflamed axons: %d\n', 0);

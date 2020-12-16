@@ -129,7 +129,6 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    
    % Output variable
    report = struct;
-   
    % Check for special events
    if isfield(opts,'Events')
       % Inflammation
@@ -270,7 +269,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    
    report.locs = locs;
    report.spks = spks;
-   
+      
    % Close progress bar
    try delete(w); catch E, fprintf(2,'\t%s\n',E.message); end
 end
