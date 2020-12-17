@@ -175,6 +175,7 @@ vsim.data   = v;
 vsim.time   = (dt:dt:length(vsim.data)*dt);
 vsim.axons  = vv;
 vsim.report = report;
+[~, vsim.srt] = sort(max(vv), 'descend');
 % Fix the dimensions if they are wrong
 if size(vsim.data,1) < size(vsim.data,2), vsim.data = vsim.data'; end
 if size(vsim.time,1) < size(vsim.time,2), vsim.time = vsim.time'; end
@@ -189,7 +190,7 @@ if PLOT
    figure;
    vv = vsim.axons;
    max_vv = max(vv);
-   [~, vsim.srt] = sort(max_vv, 'descend');
+   %[~, vsim.srt] = sort(max_vv, 'descend');
    try
       if ~has_drift || ~pre_noise
          plot(vsim.time, vv(:,vsim.srt));
@@ -217,18 +218,7 @@ if PLOT
 end
 
 %% Print report
-try
-   if isfield(report, 'inf_time')
-      fprintf('\tInflammation: %.02f s| Number of inflamed axons: %d\n', report.inf_time * dt, numel(report.inflamed));
-   else
-      fprintf('\tNumber of inflamed axons: %d\n', 0);
-   end
-   fprintf('\tAmplitude change time: %.02f s\n', report.opts.Events.amplitude_dist_onset * dt);
-   fprintf('\tRecruited axons: %s\n', num2str(find(report.recruit > min(report.recruit))'));
-   fprintf('\tDismissed axons: %s\n', num2str(find(report.dismiss < max(report.dismiss))'));
-catch E
-   fprintf('\tCouldn''t print the report. Unexpected event: %s\n', E.message);
-end
+%printReport(report, dt);
 %% Save
 % Check size of the variable to save. If it is larger than 2Gb, remove the
 % per axon field: vsim.axons
