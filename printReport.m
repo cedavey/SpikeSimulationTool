@@ -10,15 +10,15 @@ function report_op = printReport(report, dt)
 
 try
    if isfield(report, 'inf_time')
-      report_op = sprintf('\tInflammation: %.02f s | Number of inflamed axons: %d\n\tAmplitude change time: %.02f s\n\tRecruited axons: %s\n\tDismissed axons: %s\n', ...
+      report_op = sprintf('Start time of inflammation: %.02f s | Number of inflamed axons: %d\nAmplitude change time: %.02f s\nRecruited axons: %s\nDismissed axons: %s\n', ...
           report.inf_time * dt, numel(report.inflamed), report.opts.Events.amplitude_dist_onset * dt, num2str(find(report.recruit > min(report.recruit))'), ...
           num2str(find(report.dismiss < max(report.dismiss))'));
    else
-      report_op = sprintf('\tNumber of inflamed axons: %d\n\tAmplitude change time: %.02f s\n\tRecruited axons: %s\n\tDismissed axons: %s\n', ...
+      report_op = sprintf('Number of inflamed axons: %d\nAmplitude change time: %.02f s\nRecruited axons: %s\nDismissed axons: %s\n', ...
           0, report.opts.Events.amplitude_dist_onset * dt, num2str(find(report.recruit > min(report.recruit))'), num2str(find(report.dismiss < max(report.dismiss))'));
    end
 catch E
-   report_op = sprintf('\tCouldn''t print the report. Unexpected event: %s\n', E.message);
+   report_op = sprintf('Couldn''t print the report. Unexpected event: %s\n', E.message);
 end
 end
 

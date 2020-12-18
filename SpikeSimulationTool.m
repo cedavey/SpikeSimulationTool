@@ -61,7 +61,7 @@ if nargin >= 1
    
    swtch      = varargin{2};    % Pass in swtch for Events parameters
    evnts.inflammation_axons = data.inflamNum;
-   evnts.inflammation_onset = data.inflamLen;
+   evnts.inflammation_onset = data.inflamLen * fs;
    evnts.inflammation_tau = data.inflamTau;
    evnts.amplitude_dist_onset = data.externalOnset;
    evnts.amplitude_dist_value = data.externalValue;
