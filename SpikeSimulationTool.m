@@ -63,7 +63,7 @@ if nargin >= 1
    evnts.inflammation_axons = data.inflamNum;
    evnts.inflammation_onset = data.inflamLen * fs;
    evnts.inflammation_tau = data.inflamTau;
-   evnts.amplitude_dist_onset = data.externalOnset;
+   evnts.amplitude_dist_onset = data.externalOnset * fs;
    evnts.amplitude_dist_value = data.externalValue;
    evnts.amplitude_dist_prob = data.externalProb;
 end
