@@ -85,7 +85,7 @@ function v = add_drift(v_in, varargin)
          opts.Growth = [opts.Growth(1) opts.Growth(1)];
       end
       
-      if opts.PwLocs ~= 0 && opts.PwGrowth == 0
+      if opts.PwLocs ~= 0 & opts.PwGrowth == 0
          error('If ''PwLocs'' is an input, ''PwGrowth'' must be provided as well.');
       end
       

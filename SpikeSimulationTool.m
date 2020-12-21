@@ -59,43 +59,33 @@ if nargin >= 1
    passband   = data.passband;
    PLOT       = data.PLOT;
    
-   swtch      = varargin{2};    % Pass in swtch for Events parameters
-   evnts.inflammation_axons = data.inflamNum;
-   evnts.inflammation_onset = data.inflamLen * fs;
-   evnts.inflammation_tau = data.inflamTau;
-   evnts.amplitude_dist_onset = data.externalOnset * fs;
-   evnts.amplitude_dist_value = data.externalValue;
-   evnts.amplitude_dist_prob = data.externalProb;
+   swtch      = varargin{2};    % Pass in swtch struct for evnts parameters
+   events     = varargin{3};    % Pass in events struct for evnts parameters
 end
 
 %% Events
-if ~swtch.inflamNum
-    evnts.inflammation_axons   = floor(0 + ((Naxons/2 - 0) * rand)); % Number of inflamed axons (increase the spike rate).
-end
-if ~swtch.inflamLen
-    evnts.inflammation_onset   = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % High frequency at time
-end
-if ~swtch.inflamTau
-    evnts.inflammation_tau     = 5e-3*fs;  % Time constant for increased spike rate to decay to spontaneous activity
-end
+evnts.inflammation_axons   = floor(0 + ((Naxons/2 - 0) * rand)); % Number of inflamed axons (increase the spike rate).
+evnts.inflammation_onset   = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % High frequency at time
+evnts.inflammation_tau     = 5e-3*fs;  % Time constant for increased spike rate to decay to spontaneous activity
 
 % Natural
 evnts.amplitude_nat_onset  = 500*fs;   % Change of amplitude in just some of axons
 evnts.amplitude_nat_axons  = 0;        % Change of amplitude in just a couple of axons
 
-% External
-if ~swtch.externalOnset
-    evnts.amplitude_dist_onset = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % Change of amplitude in all axons
-end
-if ~swtch.externalValue
-    evnts.amplitude_dist_value = 0.5 + (1.5 - 0.5) * rand;      % Value of the new amplitude multiplier
-end
-if ~swtch.externalProb
-    evnts.amplitude_dist_prob  = 0.2; % Probability of having a change in the amplitude
-end
+
+evnts.amplitude_dist_onset = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % Change of amplitude in all axons
+evnts.amplitude_dist_value = 0.5 + (1.5 - 0.5) * rand;      % Value of the new amplitude multiplier
+evnts.amplitude_dist_prob  = 0.2; % Probability of having a change in the amplitude
 
 evnts.prob_start           = floor(0 + ((Naxons/2 - 0) * rand)); % (Recruited) Number of axons that don't start at the beginning. They will randomly start somewhere along the recording.
 evnts.prob_end             = floor(0 + ((Naxons/2 - 0) * rand)); % (Dismissed) Number of axons that don't last the whole recording. They will randomly end somewhere along the recording.
+
+% If there is change in event value, input values
+for fn = fieldnames(events)'
+    if swtch.(fn{1}) == 1
+        evnts.(fn{1}) = events.(fn{1});
+    end
+end
 
 %% Run
 % Load the templates matrix
