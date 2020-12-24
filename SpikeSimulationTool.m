@@ -58,16 +58,20 @@ if nargin >= 1
    do_filter  = data.do_filter;
    passband   = data.passband;
    PLOT       = data.PLOT;
+   
+   swtch      = varargin{2};    % Pass in swtch struct for evnts parameters
+   events     = varargin{3};    % Pass in events struct for evnts parameters
 end
 
-
 %% Events
+evnts.inflammation_axons   = floor(0 + ((Naxons/2 - 0) * rand)); % Number of inflamed axons (increase the spike rate).
 evnts.inflammation_onset   = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % High frequency at time
 evnts.inflammation_tau     = 5e-3*fs;  % Time constant for increased spike rate to decay to spontaneous activity
-evnts.inflammation_axons   = floor(0 + ((Naxons/2 - 0) * rand)); % Number of inflamed axons (increase the spike rate).
 
+% Natural
 evnts.amplitude_nat_onset  = 500*fs;   % Change of amplitude in just some of axons
 evnts.amplitude_nat_axons  = 0;        % Change of amplitude in just a couple of axons
+
 
 evnts.amplitude_dist_onset = round((total_time/4 + ((total_time*3/4) - (total_time/4)) * rand) * fs);  % Change of amplitude in all axons
 evnts.amplitude_dist_value = 0.5 + (1.5 - 0.5) * rand;      % Value of the new amplitude multiplier
@@ -76,6 +80,12 @@ evnts.amplitude_dist_prob  = 0.2; % Probability of having a change in the amplit
 evnts.prob_start           = floor(0 + ((Naxons/2 - 0) * rand)); % (Recruited) Number of axons that don't start at the beginning. They will randomly start somewhere along the recording.
 evnts.prob_end             = floor(0 + ((Naxons/2 - 0) * rand)); % (Dismissed) Number of axons that don't last the whole recording. They will randomly end somewhere along the recording.
 
+% If there is change in event value, input values
+for fn = fieldnames(events)'
+    if swtch.(fn{1}) == 1
+        evnts.(fn{1}) = events.(fn{1});
+    end
+end
 
 %% Run
 % Load the templates matrix
@@ -155,6 +165,7 @@ vsim.data   = v;
 vsim.time   = (dt:dt:length(vsim.data)*dt);
 vsim.axons  = vv;
 vsim.report = report;
+[~, vsim.srt] = sort(max(vv), 'descend');
 % Fix the dimensions if they are wrong
 if size(vsim.data,1) < size(vsim.data,2), vsim.data = vsim.data'; end
 if size(vsim.time,1) < size(vsim.time,2), vsim.time = vsim.time'; end
@@ -169,15 +180,15 @@ if PLOT
    figure;
    vv = vsim.axons;
    max_vv = max(vv);
-   [~, srt] = sort(max_vv, 'descend');
+   %[~, vsim.srt] = sort(max_vv, 'descend');
    try
       if ~has_drift || ~pre_noise
-         plot(vsim.time, vv(:,srt));
+         plot(vsim.time, vv(:,vsim.srt));
       else
-         plot(vsim.time(101:end), vv(:,srt));
+         plot(vsim.time(101:end), vv(:,vsim.srt));
       end
    catch
-      plot(vsim.time(101:end), vv(:,srt));
+      plot(vsim.time(101:end), vv(:,vsim.srt));
    end
    xlabel('Time (s)');
    ylabel('Amplitude');
@@ -197,18 +208,7 @@ if PLOT
 end
 
 %% Print report
-try
-   if isfield('inf_time', report)
-      fprintf('\tInflammation: %.02f s| Number of inflamed axons: %d\n', report.inf_time * dt, numel(report.inflamed));
-   else
-      fprintf('\tNumber of inflamed axons: %d\n', 0);
-   end
-   fprintf('\tAmplitude change time: %.02f s\n', report.opts.Events.amplitude_dist_onset * dt);
-   fprintf('\tRecruited axons: %s\n', num2str(find(report.recruit > min(report.recruit))'));
-   fprintf('\tDismissed axons: %s\n', num2str(find(report.dismiss < max(report.dismiss))'));
-catch E
-   fprintf('\tCouldn''t print the report. Unexpected event: %s\n', E.message);
-end
+%printReport(report, dt);
 %% Save
 % Check size of the variable to save. If it is larger than 2Gb, remove the
 % per axon field: vsim.axons

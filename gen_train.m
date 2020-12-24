@@ -92,7 +92,7 @@ function [v, vv, report] = gen_train(templates, Naxons, fs, duration, varargin)
    axs = randperm(Naxons, opts.Recruited); % Axons to be recruited along the recording
    st_time(axs) = randi(round(2*duration/3), [opts.Recruited, 1]);
    
-   % Endinf time of each axon
+   % Ending time of each axon
    end_time = duration * ones(size(opts.SpikeRate)); % Sample 1
    axs = randperm(Naxons, opts.Dismissed); % Axons to be dismissed along the recording
    end_time(axs) = randi(round([(duration/3) ,duration]), [opts.Dismissed, 1]);
@@ -104,7 +104,7 @@ function [v, vv, report] = gen_train(templates, Naxons, fs, duration, varargin)
    v = sum(vv,2);
    
    % Normalize to maximum value
-   v = v * max(v);
+   v = v / max(v);
    
    % Return information about the simulation
    report = struct;
@@ -129,7 +129,6 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    
    % Output variable
    report = struct;
-   
    % Check for special events
    if isfield(opts,'Events')
       % Inflammation
@@ -270,7 +269,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    
    report.locs = locs;
    report.spks = spks;
-   
+      
    % Close progress bar
    try delete(w); catch E, fprintf(2,'\t%s\n',E.message); end
 end
