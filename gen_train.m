@@ -104,7 +104,7 @@ function [v, vv, report] = gen_train(templates, Naxons, fs, duration, varargin)
    v = sum(vv,2);
    
    % Normalize to maximum value
-   v = v * max(v);
+   v = v / max(v);
    
    % Return information about the simulation
    report = struct;

@@ -1,5 +1,4 @@
 % 17th December 2020
-% Chi Yung Darren Tan 910828
 
 % This function replaces the print report within SpikeSimulationTool.m
 
@@ -8,42 +7,30 @@
 
 function report_op = printReport(report, dt)
 
+% Determines which axons are recruited and dismissed for the report
+axons_recruited = sprintf('%d, ', find(report.recruit > min(report.recruit)));
+axons_recruited = axons_recruited(1 : end-2); % removes final ', '
+
+axons_dismissed = sprintf('%d, ', find(report.dismiss < max(report.dismiss)));
+axons_dismissed = axons_dismissed(1 : end-2); % removes final ', '
+
+% Print report depending on whether there is inflammation
 try
-   % Finding which fields have different values
-   i = find(report.recruit > min(report.recruit));
-   j = find(report.dismiss < max(report.dismiss));
-
-   %Initialisation
-   recruited_s = [];
-   dismissed_s = [];
-
-   % If find reports vector length 1, simply print that value
-   if length(i) == 1
-       recruited_s = num2str(i');
-
-   % If length of find is larger than 1, iterate through its length to
-   % print correct statement
-   elseif length(i) > 1
-       recruited_s = [num2str(i(1))];
-       for x = 2:length(i)
-           recruited_s = [recruited_s ', ' num2str(i(x))];
-       end
-   end
-   % Same as above but for dismissed
-   if length(j) == 1
-       dismissed_s = num2str(j');
-   elseif length(j) > 1
-       dismissed_s = [num2str(j(1))];
-       for x = 2:length(j)
-           dismissed_s = [dismissed_s ', ' num2str(j(x))];
-       end
-   end
    if isfield(report, 'inf_time')
-      report_op = sprintf('Start time of inflammation: %.02f s | Number of inflamed axons: %d\nTime when amplitude changes: %.02f s\nRecruited axon(s): %s\nDismissed axon(s): %s\n', ...
-          report.inf_time * dt, numel(report.inflamed), report.opts.Events.amplitude_dist_onset * dt, recruited_s, dismissed_s);
+      report_op = sprintf('Start time of inflammation: %.02f s | Number of inflamed axons: %d\nAmplitude change time: %.02f s\nRecruited axon(s): %s\nDismissed axon(s): %s\n', ...
+                          report.inf_time * dt,                         ... % Start time of inflammation [s]
+                          numel(report.inflamed),                       ... % Num of inflammed axons
+                          report.opts.Events.amplitude_dist_onset * dt, ... % Amplitude change time [s]
+                          axons_recruited,                              ... % Axons Recruited
+                          axons_dismissed                               ... & Axons Dismissed
+                          );
    else
-      report_op = sprintf('Number of inflamed axons: %d\nTime when amplitude changes: %.02f s\nRecruited axons: %s\nDismissed axons: %s\n', ...
-          0, report.opts.Events.amplitude_dist_onset * dt, recruited_s, dismissed_s);
+      report_op = sprintf('Number of inflamed axons: %d\nAmplitude change time: %.02f s\nRecruited axon(s): %s\nDismissed axon(s): %s\n', ...
+                          0,                                            ... % Num of inflammed axons
+                          report.opts.Events.amplitude_dist_onset * dt, ... % Amplitude change time [s]
+                          axons_recruited,                              ... % Axons Recruited
+                          axons_dismissed                               ... & Axons Dismissed
+                          );
    end
 catch E
    report_op = sprintf('Couldn''t print the report. Unexpected event: %s\n', E.message);
@@ -62,4 +49,4 @@ end
 %    fprintf('\tDismissed axons: %s\n', num2str(find(report.dismiss < max(report.dismiss))'));
 % catch E
 %    fprintf('\tCouldn''t print the report. Unexpected event: %s\n', E.message);
-% end
+% end 
