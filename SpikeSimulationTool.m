@@ -89,7 +89,7 @@ end
 
 %% Run
 % Load the templates matrix
-load(['.' filesep 'templates' filesep 'templates4']);
+load(['.' filesep 'templates' filesep 'templates_test']);
 
 % Normalize templates amplitude, max peak = 1
 for i =1:size(d,2)
