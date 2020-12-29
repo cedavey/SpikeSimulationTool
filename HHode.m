@@ -1,30 +1,30 @@
 %HH.m
 
-function xdot= HHode(t, x, flag, Iapp)
+function xdot= HHode(t, x, flag, Iapp, const)
 % ODE variables
 V=x(1); m=x(2); h=x(3); n=x(4);
 
-% Set constant parameter (Can be changed for different cell types) 
-VNa = 50;      gNa = 120; %Sodium equi voltage & conductance
-VK  = -77;     gK  = 36;  %Potassium equi voltage & conductance
-VL  = -54.4;   gL  = 0.3; %Leak current equi voltage & conductance
-C   = 1;  %Capacitance of membrane
+% Calculates all the alphas and beta
+nAlpha = 0.01*(V - (const.vRest + 10))/(1 - exp(-(V - (const.vRest + 10))/10));
+nBeta = 0.125*exp(-(V - const.vRest)/80);
+mAlpha = 0.1*(V - (const.vRest + 25))/(1 - exp(-(V - (const.vRest + 25))/10));
+mBeta = 4*exp(-(V - const.vRest)/18);
+hAlpha = 0.07*exp(-(V - const.vRest)/20);
+hBeta = 1/(1 + exp(-(V - (const.vRest + 30))/10));
 
-%taum= 1/ (         alpha(V)              +      beta(V)     )
-taum = 1/ (0.1*(V+40)/(1-exp(-(V+40)/10)) + 4*exp(-(V+65)/18));
-%minf=            alpha(V)             *taum
-minf = (0.1*(V+40)/(1-exp(-(V+40)/10)))*taum;
+% Calculates tau and inf
+tauN = 1/(nAlpha + nBeta);
+infN = nAlpha * tauN;
 
-tauh = 1/(0.07*exp(-(V+65)/20)+(1/(1+exp(-(V+35)/10))));
-hinf = 0.07*exp(-(V+65)/20)*tauh;
+tauM = 1/(mAlpha + mBeta);
+infM = mAlpha * tauM;
 
-taun = 1/(0.01*(V+55)/(1-exp(-(V+55)/10))+0.125*exp(-(V+65)/80));
-ninf = (0.01*(V+55)/(1-exp(-(V+55)/10)))*taun;
+tauH = 1/(hAlpha + hBeta);
+infH = hAlpha * tauH;
 
-%
-
-xdot(1,1) = (Iapp(t) - gNa*m^3*h*(V-VNa) - gK*(V-VK)*n^4 - gL*(V-VL))/C; %dV/dt
-xdot(2,1) = -(m - minf)/taum; %dm/dt
-xdot(3,1) = -(h - hinf)/tauh; %dh/dt
-xdot(4,1) = -(n - ninf)/taun; %dn/dt
+% calculates the ODE
+xdot(1,1) = (Iapp(t) - const.gNa * m^3 * h * (V - const.eNa) - const.gK * (V - const.eK) * n^4 - const.gLeak * (V - const.eLeak))/const.C;
+xdot(2,1) = -(m - infM)/tauM;
+xdot(3,1) = -(h - infH)/tauH;
+xdot(4,1) = -(n - infN)/tauN;
 % End HH.m

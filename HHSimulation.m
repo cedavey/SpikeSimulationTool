@@ -8,7 +8,18 @@ clear all
 close all
 
 % Initialize constants
-duration = 100; % duration of simulation in msec
+% All these also can be varied
+% These are the channel constants
+const.vRest = -65;               % This can be varied later on
+const.eNa   = 115 + const.vRest; % [mV]
+const.gNa   = 120;
+const.eK    = -12 + const.vRest; % [mV]
+const.gK    = 36;
+const.eLeak = 10.6 + const.vRest;% [mV]
+const.gLeak = 0.3;
+const.C     = 1.0;               % Capacitance of membrane
+
+duration = 100; % [msec]
 tInit    = [0 duration];
 xInit    = [-65; 0.052; 0.059; 0.317];
 
@@ -16,7 +27,7 @@ xInit    = [-65; 0.052; 0.059; 0.317];
 Iapp     = @Iapp_func; % applied current injection (can be written as function of t)
 
 % Run ODE
-[t, x] = ode45('HHode', tInit, xInit, [], Iapp);
+[t, x] = ode45('HHode', tInit, xInit, [], Iapp, const);
 
 % Generate new template
 [new_t, new_template] = gen_template(t, x(:,1), duration);
@@ -57,6 +68,8 @@ end
 function Iapp_out = Iapp_func(t)
 
 Iapp_out = 10*exp(-(2*t-50).^2); % Bell curve
+
+%Iapp_out = 10*sin(t/5);
 
 %Iapp_out(Iapp_out < 0) = 0; 
 
