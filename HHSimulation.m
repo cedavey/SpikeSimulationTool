@@ -7,9 +7,8 @@
 clear all
 close all
 
-% Initialize constants
+% Initialize channel constants
 % All these also can be varied
-% These are the channel constants
 const.vRest = -65;               % This can be varied later on
 const.eNa   = 115 + const.vRest; % [mV]
 const.gNa   = 120;
@@ -24,7 +23,7 @@ tInit    = [0 duration];
 xInit    = [-65; 0.052; 0.059; 0.317];
 
 % Iapp function
-Iapp     = @Iapp_func; % applied current injection (can be written as function of t)
+Iapp = @Iapp_func; % applied current injection (can be written as function of t)
 
 % Run ODE
 [t, x] = ode45('HHode', tInit, xInit, [], Iapp, const);
@@ -35,6 +34,53 @@ Iapp     = @Iapp_func; % applied current injection (can be written as function o
 % Plot
 plot_simulation(t, x, duration, Iapp, new_t, new_template);
 
+
+%% Iapp function
+function Iapp_out = Iapp_func(t)
+
+% Bell curve function
+Iapp_out = 10  * exp(-((t-15)*2).^2) + ...
+           15 * exp(-((t-30)*3).^2) + ...
+           20 * exp(-((t-70)/2).^2); 
+
+
+% Constant function
+%Iapp_out = 5;
+
+% Sine function
+%Iapp_out = 10*sin((t-10)/5);
+
+% Removes negative numbers
+%Iapp_out(Iapp_out < 0) = 0; 
+
+end
+
+%% Create new template function
+function [new_t, new_template] = gen_template(t, data, duration)
+fr = 5000; %sampling rate
+
+% Interpolate data for constant sampling rate
+new_t = 0 : 1/fr*1000 : duration;
+new_template = interp1(t, data, new_t, 'spline');
+
+% Extract only bits where there is significant change and removes points
+% where membrane is resting 
+% The > 0.2 and 0.05 difference values currently chosen to fit data
+difference = abs(diff(new_template));
+start_ap = new_t(find(difference > 0.2, 1, 'first')); % Start of AP [ms]
+end_ap   = new_t(find(difference > 0.01, 1, 'last') + 1);   % End of AP [ms]
+
+if (numel(start_ap) == 0) || (numel(end_ap) == 0) 
+    % Checks if membrane is just resting the entire duration
+    new_t        = 0; 
+    new_template = 0;
+else
+    % Extract the relevant template section
+    new_template((new_t < start_ap) | (new_t > end_ap)) = [];
+    new_t((new_t < start_ap) | (new_t > end_ap)) = [];
+end
+
+end
 
 %% PLOT function
 function plot_simulation(t, x, duration, Iapp, new_t, new_template)
@@ -51,7 +97,7 @@ Iapp_ = Iapp(t);
 if numel(Iapp_) == 1; Iapp_ = Iapp_*ones(size(t)); end % Changes a constant Iapp_ to an array for plotting
 
 % Plot new template
-plot(new_t, new_template, 'r');
+plot(new_t, new_template, '-r');
 
 yyaxis right
 p = plot(t, Iapp_, '-');
@@ -60,38 +106,6 @@ axis([0, duration, -(4*max(abs(Iapp_))), (3*max(abs(Iapp_)))]);
 xlabel('time (ms)');
 ylabel('Current applied');
 
-legend('AP voltage', 'New extracted template','Applied current');
+legend('AP voltage', 'Extracted template','Applied current');
 
 end
-
-%% Iapp function
-function Iapp_out = Iapp_func(t)
-
-Iapp_out = 10*exp(-(2*t-50).^2); % Bell curve
-
-%Iapp_out = 10*sin(t/5);
-
-%Iapp_out(Iapp_out < 0) = 0; 
-
-end
-
-%% Create new template function
-function [new_t, new_template] = gen_template(t, data, duration)
-sr = 5000; %sampling rate
-
-% Interpolate data for constant sampling rate
-new_t = 0 : 1/sr*1000 : duration;
-new_template = interp1(t, data, new_t, 'spline');
-
-% Extract only bits where there is an action potential and removes points
-% where membrane is resting (values currently hardcoded and needs to be updated for each
-% new spike generation)
-start_ap = 23.2; % Start of AP [ms]
-end_ap   = 51;   % End of AP [ms]
-
-new_template((new_t < start_ap) | (new_t > end_ap)) = [];
-new_t((new_t < start_ap) | (new_t > end_ap)) = [];
-
-end
-
-
