@@ -85,6 +85,7 @@ end
 %% PLOT function
 function plot_simulation(t, x, duration, Iapp, new_t, new_template)
 % Plot action potential
+subplot(2,1,1);
 hold on
 yyaxis left
 plot(t, x(:,1));
@@ -107,5 +108,18 @@ xlabel('time (ms)');
 ylabel('Current applied');
 
 legend('AP voltage', 'Extracted template','Applied current');
+hold off
+
+% Plot the m, h and n variables
+subplot(2,1,2);
+hold on
+plot(t, x(:,2));
+plot(t, x(:,3));
+plot(t, x(:,4));
+ylim([-0.1 1.1]);
+xlabel('Time (ms)');
+ylabel('Activation');
+title('Channel activations');
+legend('m', 'h', 'n');
 
 end
