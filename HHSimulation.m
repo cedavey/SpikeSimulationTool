@@ -121,5 +121,6 @@ xlabel('Time (ms)');
 ylabel('Activation');
 title('Channel activations');
 legend('m', 'h', 'n');
+hold off
 
 end
