@@ -185,7 +185,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       isi = round(isi);
       % Remove isi that are closer than the duration of a spike or
       % refractory period
-      isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = ceil(size(templates,1) + rest);
+      isi(isi < (((size(templates,1)) * 4/5) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = ceil(size(templates,1) + rest);
       
       % Change it here
       
