@@ -2,3 +2,4 @@
 *.asv
 *.log
 sim.mat
+PlotTemplates.m
