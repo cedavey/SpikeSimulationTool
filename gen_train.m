@@ -52,7 +52,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-%% Chris comment
+%%
 function [v, vv, report] = gen_train(templates, Naxons, fs, duration, varargin)
    % Default inputs
    opts.SpikeRate = 100;
@@ -181,11 +181,11 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       % ISI is here
       
       currentTemplate = templates_(i); % Randomly pick 1 of the templates to assign to this axon.
-      isi = random('Exponential', fs/opts.SpikeRate(i), [3 * max_spike_num 1]);
+      isi = random('Exponential', fs/opts.SpikeRate(i), [max_spike_num 1]);
       isi = round(isi);
       % Remove isi that are closer than the duration of a spike or
       % refractory period
-      isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = ceil(size(templates,1) + rest);
+      %isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = ceil(size(templates,1) + rest);
       
       % Change it here
       
@@ -200,12 +200,14 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
          sr = 9 * exp(-(1:numel(isi)-inf_sample)/(tau)) + 1; % Get an exponential from 10 to 1 with time constant tau
          isi(inf_sample + 1:end) = isi(inf_sample + 1:end)./sr';
          % Remove isi that are closer than the duration of a spike
-         isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = size(templates,1) + rest; % isi(isi < size(templates,1)) = size(templates,1);
+         %isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = size(templates,1) + rest; % isi(isi < size(templates,1)) = size(templates,1);
          isi = ceil(isi);
       end
-        
+      
+      [sptimes, sptimes_normal, sptimes_transition] = seperate_transition_spikes(isi, size(templates,1));
+      
       % Get spike times
-      sptimes = cumsum(isi);
+      %sptimes = cumsum(isi);
             
       % Remove spikes that exceed the duration of the recording or the end
       % time of the particular axon
@@ -276,4 +278,48 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       
    % Close progress bar
    try delete(w); catch E, fprintf(2,'\t%s\n',E.message); end
+end
+
+% Seperates the spikes which are close together and have transitions between them and
+% those far apart without transitions.
+function [sptimes, sptimes_normal, sptimes_transition] = seperate_transition_spikes(isi, duration_of_spike)
+
+% Calculate times of all spikes
+sptimes = cumsum(isi);
+
+% Determine the times for spikes that do not transition
+sptimes_normal    = isi(1); 
+for iii = 1 : length(isi)-1
+   if isi(iii) <= duration_of_spike  || isi(iii+1) <= duration_of_spike
+       % When the isi for the next 2 spikes is <= rest, adds the 
+       % current isi to the current cumulative sum
+       sptimes_normal(end) = sptimes_normal(end) + isi(iii+1);
+       
+   elseif isi(iii) > duration_of_spike
+       % When the isi for the spikes is > rest, it creates a new index to
+       % indicate the next normal (without transition) spike
+       sptimes_normal(end+1) = sptimes_normal(end) + isi(iii+1);
+       
+   else
+       error('Error: There is a missing value in sptimes_normal');
+   end
+end
+% Weird start and end exceptions that the for loop cant handle properly
+% Bit hard to explain this one
+if isi(2) > duration_of_spike; sptimes_normal(1) = isi(1); end
+% Clears the last sptimes_normal if the last isi is less than the rest time
+% since the for loop above can't check the preallocated last value (may
+% need to change this when considering total duration of simulation)
+if isi(end) <= duration_of_spike;  sptimes_normal(end) = []; end
+
+
+% Determines the times of spikes with transitions (mutually exclusive to
+% times without transitions)
+idx = [];
+for iiii = sptimes_normal 
+    idx(end+1) = find(sptimes == iiii, 1); 
+end
+sptimes_transition = sptimes;
+sptimes_transition(idx) = [];
+
 end
