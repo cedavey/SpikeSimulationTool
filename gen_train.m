@@ -188,6 +188,9 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = ceil(size(templates,1) + rest);
       
       % Change it here
+      % adfoij
+      % adsfj
+      % aggdij
       
       % If it doesn't get affected by inflammation, it's firing rate
       % remains constant. If it does, we will remove the isi's who's cumsum
