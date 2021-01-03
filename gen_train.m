@@ -52,7 +52,7 @@
 % See the License for the specific language governing permissions and
 % limitations under the License.
 
-%%
+%% Chris comment
 function [v, vv, report] = gen_train(templates, Naxons, fs, duration, varargin)
    % Default inputs
    opts.SpikeRate = 100;
