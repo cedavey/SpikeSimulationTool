@@ -39,9 +39,9 @@ plot_simulation(t, x, duration, Iapp, new_t, new_template);
 function Iapp_out = Iapp_func(t)
 
 % Bell curve function
-Iapp_out = 10  * exp(-((t-15)*2).^2) + ...
-           15 * exp(-((t-30)*3).^2) + ...
-           20 * exp(-((t-70)/2).^2); 
+Iapp_out = 10  * exp(-((t-15)*2).^2);
+           %15 * exp(-((t-30)*3).^2) + ...
+           %20 * exp(-((t-70)/2).^2); 
 
 
 % Constant function
@@ -60,25 +60,27 @@ function [new_t, new_template] = gen_template(t, data, duration)
 fr = 5000; %sampling rate
 
 % Interpolate data for constant sampling rate
-new_t = 0 : 1/fr*1000 : duration;
-new_template = interp1(t, data, new_t, 'spline');
+new_t = 0 : 1/fr*1000 : duration;   % Time vector
+new_template = interp1(t, data, new_t, 'spline');   % Value vector
 
-% Extract only bits where there is significant change and removes points
-% where membrane is resting 
-% The > 0.2 and 0.05 difference values currently chosen to fit data
-difference = abs(diff(new_template));
-start_ap = new_t(find(difference > 0.2, 1, 'first')); % Start of AP [ms]
-end_ap   = new_t(find(difference > 0.01, 1, 'last') + 1);   % End of AP [ms]
+% Differentiate the new_template to find start and end index
+slope = diff(new_template)./diff(new_t);
 
-if (numel(start_ap) == 0) || (numel(end_ap) == 0) 
-    % Checks if membrane is just resting the entire duration
-    new_t        = 0; 
-    new_template = 0;
-else
-    % Extract the relevant template section
-    new_template((new_t < start_ap) | (new_t > end_ap)) = [];
-    new_t((new_t < start_ap) | (new_t > end_ap)) = [];
+% Do not extract template if no action potential is fired
+if ~any(slope > 20) 
+    new_t = 0; 
+    new_template = 0; 
+    return 
 end
+
+% If there is a large change in the first 10 ms, ignore these assuming the
+% system is going back into equilibrium
+start_ap = find(slope(10:end) >= 1, 1, 'first') + 10;   % Start AP index
+end_ap = find(slope >=0.05 | slope <= -0.03, 1, 'last');    % End AP index
+
+% Extracting only the relevant template
+new_t = new_t(start_ap - 5:end_ap);
+new_template = new_template(start_ap - 5:end_ap);
 
 end
 
