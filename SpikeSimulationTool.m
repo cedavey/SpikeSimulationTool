@@ -27,7 +27,7 @@ function vsim = SpikeSimulationTool(varargin)
 Naxons      = 5;                    % Number of different templates
 SNR         = 20;                   % Initial signal to noise ratio (it will change with drift)
 growth      = [(1.1 + (2 - 1.1) * rand) (0.8 + (1.2 - 0.8) * rand)]; % [1.9 1.1];   % Growth of: [<spamp> <noise>]
-total_time  = 2000;                 % Seconds
+total_time  = 100;                 % Seconds
 fs          = 5000;                 % Sampling rate (current template file has this sampling rate, so it should stay like this unless the templates are fixed)
 sr          = randi(10,1,Naxons)/2; % Spike rate
 overlap     = false;                % If true, it allows spikes of diff axons to overlap
@@ -81,9 +81,11 @@ evnts.prob_start           = floor(0 + ((Naxons/2 - 0) * rand)); % (Recruited) N
 evnts.prob_end             = floor(0 + ((Naxons/2 - 0) * rand)); % (Dismissed) Number of axons that don't last the whole recording. They will randomly end somewhere along the recording.
 
 % If there is change in event value, input values
-for fn = fieldnames(events)'
-    if swtch.(fn{1}) == 1
-        evnts.(fn{1}) = events.(fn{1});
+if nargin >=1
+    for fn = fieldnames(events)'
+        if swtch.(fn{1}) == 1
+            evnts.(fn{1}) = events.(fn{1});
+        end
     end
 end
 
