@@ -177,14 +177,14 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
          end_time(i) = st_time(i);
          st_time(i) = et;
       end
-      
-      % ISI is here
+     
       
       currentTemplate = templates_(i); % Randomly pick 1 of the templates to assign to this axon.
       isi = random('Exponential', fs/opts.SpikeRate(i), [max_spike_num 1]);
       isi = round(isi);
       % Remove isi that are closer than the duration of a spike or
       % refractory period
+
       %isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = ceil(size(templates,1) + rest);
       
       % Change it here
