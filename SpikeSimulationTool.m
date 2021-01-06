@@ -24,10 +24,10 @@
 
 function vsim = SpikeSimulationTool(varargin)
 %% Options
-Naxons      = 5;                    % Number of different templates
+Naxons      = 1;                    % Number of different templates
 SNR         = 20;                   % Initial signal to noise ratio (it will change with drift)
 growth      = [(1.1 + (2 - 1.1) * rand) (0.8 + (1.2 - 0.8) * rand)]; % [1.9 1.1];   % Growth of: [<spamp> <noise>]
-total_time  = 100;                 % Seconds
+total_time  = 20;                 % Seconds
 fs          = 5000;                 % Sampling rate (current template file has this sampling rate, so it should stay like this unless the templates are fixed)
 sr          = randi(10,1,Naxons)/2; % Spike rate
 overlap     = false;                % If true, it allows spikes of diff axons to overlap

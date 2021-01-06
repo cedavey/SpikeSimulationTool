@@ -204,7 +204,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
          isi = ceil(isi);
       end
       
-      [sptimes, sptimes_normal, sptimes_transition] = seperate_transition_spikes(isi, size(templates,1));
+      [sptimes, non_transition, transition] = seperate_transition_spikes(isi, size(templates,1));
       
       % Get spike times
       %sptimes = cumsum(isi);
@@ -212,8 +212,12 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       % Remove spikes that exceed the duration of the recording or the end
       % time of the particular axon
       sptimes(sptimes > end_time(i)) = [];
+      non_transition(non_transition > end_time(i)) = [];
+      transition(transition > end_time(i)) = [];
       % Remove spikes that occur befor the axon is recruited
       sptimes(sptimes < st_time(i)) = [];
+      non_transition(non_transition < st_time(i)) = [];
+      transition(transition < st_time(i)) = [];
       
       % Check for overlapping spikes on different recordings. If overlap is
       % false, then don't allow overlapping.
@@ -223,7 +227,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
             for ii = 1:length(allsptimes)
                % Remove the opts.overlapped
                sptimes(((sptimes >= allsptimes(ii) - size(templates,1))...
-                  & (sptimes < allsptimes(ii) + size(templates,1)))) = [];
+                      & (sptimes <  allsptimes(ii) + size(templates,1)))) = [];
                % Update progress
                try w = waitbar((i-1)/Naxons + ii/(length(allsptimes)*Naxons), w); catch E, delete(w); error('Manually stopped'); end
             end
@@ -234,31 +238,37 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       end
       
       % Create a recording of zeroes
-      v_ = zeros(duration, 1);
+      v_non_transition = zeros(duration, 1);
+%       v_transition = zeros(duration, 1);
       spks(:,i) = zeros(duration, 1);
       
       % Assign binary spikes to the vector, the amplitude of the spikes is
       % weighted, instead of being just 1 or 0.
-      v_(sptimes) = amplitudes(i);
+      v_non_transition(non_transition) = amplitudes(i);
+%       v_transition(transition) = amplitudes(i);
       spks(sptimes,i) = 1;
       % Vary the amplitude
-      rand_amp = 0.99 + (1.01 - 0.99) .* rand(size(sptimes)); % small variation in amplitude
-      v_(sptimes) = v_(sptimes).*rand_amp;
+      rand_amp = 0.99 + (1.01 - 0.99) .* rand(size(non_transition)); % small variation in amplitude
+      v_non_transition(non_transition) = v_non_transition(non_transition).*rand_amp;
+%       rand_amp = 0.99 + (1.01 - 0.99) .* rand(size(transition));
+%       v_transition(transition) = v_transition(transition).*rand_amp;
       
       % If the amplitude of current axon changes suddenly, scale all the
       % spikes after such time.
       % Ref: quirk2001, tsubokawa1996
       if ~isempty(find(amped == i,1))
          end_amp = (0.5 * rand(1,1) - 0.25); % Change in amplitude limited to 0.15 and -0.15
-         log_amp = amplitudes(i) + (end_amp./(1 + exp(-10 * dt * ([1 : length(v_)] - amp_time)))); % logistic function
-         v_ = v_ .* log_amp';
+         log_amp = amplitudes(i) + (end_amp./(1 + exp(-10 * dt * ([1 : length(v_non_transition)] - amp_time)))); % logistic function
+         v_non_transition = v_non_transition .* log_amp';
+%          v_transition = v_transition .* log_amp';
       end
       
       % Propagate the spike shape along the spikes vector
-      v_ = conv(v_,templates(:,currentTemplate), 'same');
+      v_non_transition = conv(v_non_transition,templates(:,currentTemplate), 'same');
+      v_transition = HHSim(duration/5000*1000, transition/5000*1000);
       
       % Assign the temporal variable v_ to the matrix of axons
-      vv(:,i) = v_;
+      vv(:,i) = v_non_transition + v_transition(1:end-1)';
       
       % Save the sike locations (times) in report.locs
       locs{i} = sptimes;
@@ -282,44 +292,28 @@ end
 
 % Seperates the spikes which are close together and have transitions between them and
 % those far apart without transitions.
-function [sptimes, sptimes_normal, sptimes_transition] = seperate_transition_spikes(isi, duration_of_spike)
+function [sptimes, non_transition, transition] = seperate_transition_spikes(isi, duration_of_spike)
 
 % Calculate times of all spikes
 sptimes = cumsum(isi);
 
-% Determine the times for spikes that do not transition
-sptimes_normal    = isi(1); 
-for iii = 1 : length(isi)-1
-   if isi(iii) <= duration_of_spike  || isi(iii+1) <= duration_of_spike
-       % When the isi for the next 2 spikes is <= rest, adds the 
-       % current isi to the current cumulative sum
-       sptimes_normal(end) = sptimes_normal(end) + isi(iii+1);
-       
-   elseif isi(iii) > duration_of_spike
-       % When the isi for the spikes is > rest, it creates a new index to
-       % indicate the next normal (without transition) spike
-       sptimes_normal(end+1) = sptimes_normal(end) + isi(iii+1);
-       
-   else
-       error('Error: There is a missing value in sptimes_normal');
-   end
-end
-% Weird start and end exceptions that the for loop cant handle properly
-% Bit hard to explain this one
-if isi(2) > duration_of_spike; sptimes_normal(1) = isi(1); end
-% Clears the last sptimes_normal if the last isi is less than the rest time
-% since the for loop above can't check the preallocated last value (may
-% need to change this when considering total duration of simulation)
-if isi(end) <= duration_of_spike;  sptimes_normal(end) = []; end
+transition = [];
+non_transition = [];
+skip = 0;
 
-
-% Determines the times of spikes with transitions (mutually exclusive to
-% times without transitions)
-idx = [];
-for iiii = sptimes_normal 
-    idx(end+1) = find(sptimes == iiii, 1); 
+for i = 1:length(isi) - 1
+    if (isi(i + 1) - duration_of_spike) <= 0
+        transition = [transition; sptimes(i); sptimes(i+1)];
+        skip = 1;
+    elseif skip
+        skip = 0;
+        continue
+    else
+        non_transition = [non_transition; sptimes(i)];
+        if i == (length(isi) - 1)
+            non_transition = [non_transition; sptimes(i+1)];
+        end
+    end
 end
-sptimes_transition = sptimes;
-sptimes_transition(idx) = [];
 
 end
