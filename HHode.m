@@ -1,6 +1,5 @@
-%HH.m
 
-function xdot= HHode(t, x, flag, Iapp, const)
+function xdot= HHode(t, x, flag, transitions, const)
 % ODE variables
 V=x(1); m=x(2); h=x(3); n=x(4);
 
@@ -22,9 +21,21 @@ infM = mAlpha * tauM;
 tauH = 1/(hAlpha + hBeta);
 infH = hAlpha * tauH;
 
+% Iapp function
+if ~isempty(transitions)
+    Iapp = @(t) 10 * exp(-((t - transitions(1))*2).^2);
+end
+
+% Bell curve function generator
+if length(transitions) > 1
+    for i = 2 : length(transitions)
+        Iapp = @(t) Iapp(t) + 10 * exp(-((t - transitions(i))*2).^2);
+    end
+end
+
 % calculates the ODE
 xdot(1,1) = (Iapp(t) - const.gNa * m^3 * h * (V - const.eNa) - const.gK * (V - const.eK) * n^4 - const.gLeak * (V - const.eLeak))/const.C;
 xdot(2,1) = -(m - infM)/tauM;
 xdot(3,1) = -(h - infH)/tauH;
 xdot(4,1) = -(n - infN)/tauN;
-% End HH.m
+end
