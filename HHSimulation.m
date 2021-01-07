@@ -7,45 +7,57 @@
 clear all
 close all
 
-% Initialize channel constants
-% All these also can be varied
-const.vRest = -65;               % This can be varied later on
-const.eNa   = 115 + const.vRest; % [mV]
-const.gNa   = 120;
-const.eK    = -12 + const.vRest; % [mV]
-const.gK    = 36;
-const.eLeak = 10.6 + const.vRest;% [mV]
-const.gLeak = 0.3;
-const.C     = 1.0;               % Capacitance of membrane
+tic;
+    % Initialize channel constants
+    % All these also can be varied
+    const.vRest = -65;               % This can be varied later on
+    const.eNa   = 115 + const.vRest; % [mV]
+    const.gNa   = 120;
+    const.eK    = -12 + const.vRest; % [mV]
+    const.gK    = 36;
+    const.eLeak = 10.6 + const.vRest;% [mV]
+    const.gLeak = 0.3;
+    const.C     = 1.0;               % Capacitance of membrane
 
-duration = 100; % [msec]
-tInit    = [0 duration];
-xInit    = [-65; 0.052; 0.059; 0.317];
+    duration = 100; % [msec]
+    tInit    = [0 duration];
+    xInit    = [-65; 0.052; 0.059; 0.317];
 
-% Iapp function
-Iapp = @Iapp_func; % applied current injection (can be written as function of t)
+    % Iapp function
+    Iapp = @Iapp_func; % applied current injection (can be written as function of t)
 
-% Run ODE
-[t, x] = ode45('HHode', tInit, xInit, [], Iapp, const);
+    % Run ODE
+    [t, x] = ode45('HHode', tInit, xInit, [], Iapp, const);
 
-% Generate new template
-[new_t, new_template] = gen_template(t, x(:,1), duration);
+    % Generate new template
+    [new_t, new_template] = gen_template(t, x(:,1), duration);
+    
+    refract_time = refract_period(tInit, xInit, const, duration);
 
-% Plot
-plot_simulation(t, x, duration, Iapp, new_t, new_template);
-
+    % Plot
+    plot_simulation(t, x, duration, Iapp, new_t, new_template);
+    
+    % Calculate the refractory period
+%     [t2, x2] = ode45('HHode', tInit, xInit, [], Iapp(2), const);
+%     plot_simulation(t2, x2, duration, Iapp(2), [], []);
+    
+simulationTime = toc;
+fprintf('Time elapsed = %f\n', simulationTime);
 
 %% Iapp function
 function Iapp_out = Iapp_func(t)
 
 % Bell curve function
-Iapp_out = 10  * exp(-((t-15)*2).^2);
-           %15 * exp(-((t-30)*3).^2) + ...
+Iapp_out = 10 * exp(-((t-15)*2).^2);
+           %10 * exp(-((t-28)*2).^2);
            %20 * exp(-((t-70)/2).^2); 
 
 
-% Constant function
-%Iapp_out = 5;
+% % Constant function
+% Iapp_out = 0;
+% for i = 15:50
+%     Iapp_out = Iapp_out + 10 * exp(-((t - i)*2).^2);
+% end
 
 % Sine function
 %Iapp_out = 10*sin((t-10)/5);
@@ -87,6 +99,7 @@ end
 %% PLOT function
 function plot_simulation(t, x, duration, Iapp, new_t, new_template)
 % Plot action potential
+
 subplot(2,1,1);
 hold on
 yyaxis left
@@ -126,3 +139,38 @@ legend('m', 'h', 'n');
 hold off
 
 end
+
+%% Calculate refractory period function
+
+function refract_time = refract_period(tInit, xInit, const, duration)
+
+refract = 0;
+i = 16; % This corresponds to +1 of the initial input spike at t = 15
+while refract == 0
+    Iapp = @(t) 10 * exp(-((t-15)*2).^2) + 10 * exp(-((t-i)*2).^2);  % Need to figure a way to pass the Iapp equation into ode45 (with the t variable) and vary the equation whilst at it to iterate
+    [t, x] = ode45('HHode', tInit, xInit, [], Iapp, const);
+    
+    ap_max1 = find(x == max(x([1:320],1))); % Will need to change the 310 to a variable that can vary (since it will iterate)
+    
+    ap_max2 = find(x == max(x([320:end] , 1))); % Need to change the 310 to a variable as well
+    
+    % Calculates if the difference between the two action potentials is
+    % less than 3, then it will consider it an action potential and change
+    % refract to 1
+    if abs(x(ap_max1,1) - x(ap_max2,1)) < 3
+        refract = 1;
+        refract_time = i - 15;   % This is in ms
+    end
+    i = i + 1;
+    
+    % This will make sure this function does not exceed duration of
+    % simulation
+    if i > duration
+        error('Unable to find refractory time due to lack of second spike');
+        refract_time = NaN;
+    end
+end
+
+end    
+    
+    
