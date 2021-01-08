@@ -37,6 +37,8 @@ tic;
     % Plot
     plot_simulation(t, x, duration, Iapp, template);
     
+    % Save
+    save_templates(template);
     
 simulationTime = toc;
 fprintf('Time elapsed = %f\n', simulationTime);
@@ -170,3 +172,13 @@ end
 % 
 % end
 
+%% Save function
+function save_templates(template)
+[file, path] = uiputfile(['templates' filesep 'template_test2.mat'], 'Save file name');
+if file
+    file_name = [path filesep file];
+    save(file_name, 'template');
+else
+    fprintf('User didnt''t chose a file location. Simulation was not saved\n');
+end
+end
