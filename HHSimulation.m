@@ -48,8 +48,8 @@ fprintf('Time elapsed = %f\n', simulationTime);
 function Iapp_out = Iapp_func(t)
 
 % Bell curve function
-Iapp_out = 10 * exp(-((t-15)*2).^2);
-           %10 * exp(-((t-28)*2).^2);
+Iapp_out = 10 * exp(-((t-15)*2).^2) + ...
+           10 * exp(-((t-32)*2).^2);
            %20 * exp(-((t-70)/2).^2); 
 
 
@@ -145,32 +145,24 @@ end
 function refract_time = refract_period(tInit, xInit, const, duration)
 
 refract = 0;
+initial_ap = 15;
 i = 16; % This corresponds to +1 of the initial input spike at t = 15
 while refract == 0
-    Iapp = @(t) 10 * exp(-((t-15)*2).^2) + 10 * exp(-((t-i)*2).^2);  % Need to figure a way to pass the Iapp equation into ode45 (with the t variable) and vary the equation whilst at it to iterate
+    Iapp = @(t) 10 * exp(-((t-initial_ap)*2).^2) + 10 * exp(-((t-i)*2).^2);
     [t, x] = ode45('HHode', tInit, xInit, [], Iapp, const);
     
-    ap_max1 = find(x == max(x([1:320],1))); % Will need to change the 310 to a variable that can vary (since it will iterate)
-    
-    ap_max2 = find(x == max(x([320:end] , 1))); % Need to change the 310 to a variable as well
-    
-    % Calculates if the difference between the two action potentials is
-    % less than 3, then it will consider it an action potential and change
-    % refract to 1
-    if abs(x(ap_max1,1) - x(ap_max2,1)) < 3
+    % Use findpeaks to find the first 2 peaks which will be the 2 aps
+    pks = findpeaks(x(:,1));
+    pks = pks(pks>=0);
+    if length(pks) >= 2 && diff(abs(pks([1,2]))) < 5
         refract = 1;
-        refract_time = i - 15;   % This is in ms
+        refract_time = i - initial_ap;
     end
-    i = i + 1;
-    
-    % This will make sure this function does not exceed duration of
-    % simulation
     if i > duration
         error('Unable to find refractory time due to lack of second spike');
         refract_time = NaN;
     end
+    i = i + 1;
 end
 
-end    
-    
-    
+end
