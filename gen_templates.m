@@ -7,7 +7,7 @@
 clear all
 close all
 
-tic;
+% tic;
     % Initialize channel constants
     % All these also can be varied
     const.vRest = -65;               % This can be varied later on
@@ -27,21 +27,23 @@ tic;
     Iapp = @Iapp_func; % applied current injection (can be written as function of t)
 
     % Run ODE
-    [t, x] = ode45('HHode', tInit, xInit, [], Iapp, const);
+    [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
 
     % Generate new template
-    [template.new_t, template.new_template] = gen_template(t, x(:,1), duration);
+    [templates.t, templates.d] = gen_template(t, x(:,1), duration);
     
-    template.refract_time = refract_period(tInit, xInit, const, duration);
+    templates.refract_time = refract_period(tInit, xInit, const, duration);
+    
+    templates.transition = gen_trans(tInit, xInit, const, templates, duration);
 
     % Plot
-    plot_simulation(t, x, duration, Iapp, template);
+    plot_simulation(t, x, duration, Iapp, templates);
     
-    % Save
-    save_templates(template);
+    % Save the template struct as .mat file
+    save_templates(templates);
     
-simulationTime = toc;
-fprintf('Time elapsed = %f\n', simulationTime);
+% simulationTime = toc;
+% fprintf('Time elapsed = %f\n', simulationTime);
 
 %% Iapp function
 function Iapp_out = Iapp_func(t)
@@ -74,6 +76,7 @@ fr = 5000; %sampling rate
 new_t = 0 : 1/fr*1000 : duration;   % Time vector
 new_template = interp1(t, data, new_t, 'spline');   % Value vector
 
+% Spike template
 % Differentiate the new_template to find start and end index
 slope = diff(new_template)./diff(new_t);
 
@@ -112,7 +115,7 @@ Iapp_ = Iapp(t);
 if numel(Iapp_) == 1; Iapp_ = Iapp_*ones(size(t)); end % Changes a constant Iapp_ to an array for plotting
 
 % Plot new template
-plot(template.new_t, template.new_template, '-r');
+plot(template.t, template.d, '-r');
 
 yyaxis right
 p = plot(t, Iapp_, '-');
@@ -148,7 +151,7 @@ initial_ap = 15;
 i = 16; % This corresponds to +1 of the initial input spike at t = 15
 while refract == 0
     Iapp = @(t) 10 * exp(-((t-initial_ap)*2).^2) + 10 * exp(-((t-i)*2).^2);
-    [t, x] = ode45('HHode', tInit, xInit, [], Iapp, const);
+    [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
     
     % Use findpeaks to find the first 2 peaks which will be the 2 aps
     pks = findpeaks(x(:,1));
@@ -166,19 +169,55 @@ end
 end
 
 %% Generating templates for in between spikes for efficiency
+% This function will generate the entire template with transition periods.
+% This includes the two spikes that occur
 
-% function trans_templates = trans_gen(tInitm xInit, const, duration)
-% 
-% 
-% end
+% HOWEVER one issue that is not currently addressed (on the very very rare
+% occasion) is if whilst generating the action potential, if somehow a value
+% is == 0, then this will cause an irregularity in the template
+function trans_temp = gen_trans(tInit, xInit, const, templates, duration)
+
+% Initialising values
+temp1 = [];
+initial_ap = 15;    % This is the first input spike
+% inx = 0;
+
+% Iterate through this for the number of ms of templates you want
+% It is currently at 10 templates from right after the abs refractory
+% period
+for i = templates.refract_time:templates.refract_time + 9
+    Iapp = @(t) 10 * exp(-((t-initial_ap) * 2).^2) + 10 * exp(-((t-(initial_ap + i))*2).^2);
+    [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
+    
+    [~, temp2] = gen_template(t, x(:,1),duration);
+    temp2 = temp2';
+    
+    % This little bit will concatenate different size matricies and fill in
+    % the gaps with 0's
+    [i1, j1] = ndgrid(1:size(temp1, 1), 1:size(temp1, 2));
+    [i2, j2] = ndgrid(1:size(temp2, 1), (1:size(temp2, 2)) + size(temp1, 2));
+    temp1 = accumarray([i1(:), j1(:); i2(:), j2(:)], [temp1(:); temp2(:)]);
+end
+
+% Find all the 0s (which is 99% of the time going to be just at the end of
+% temp1 and change then to the initial value and then normalise the whole
+% array
+temp1(find(temp1 == 0)) = temp1(1,1);
+trans_temp = temp1 - temp1(1,1);
+end
 
 %% Save function
-function save_templates(template)
-[file, path] = uiputfile(['templates' filesep 'template_test2.mat'], 'Save file name');
+% Saves the struct template into a .mat file for SST to open
+function save_templates(templates)
+
+templates.d = (templates.d + abs(templates.d(1)))';
+templates.t = templates.t';
+
+[file, path] = uiputfile(['templates' filesep 'template_test2.mat'], 'Save file name'); % Will want to change the name
 if file
     file_name = [path filesep file];
-    save(file_name, 'template');
+    save(file_name, 'templates');
 else
-    fprintf('User didnt''t chose a file location. Simulation was not saved\n');
+    fprintf('User didnt''t chose a file location. Template was not saved\n');
 end
 end
