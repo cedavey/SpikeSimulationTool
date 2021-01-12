@@ -49,8 +49,8 @@ close all
 function Iapp_out = Iapp_func(t)
 
 % Bell curve function
-Iapp_out = 10 * exp(-((t-15)*2).^2) + ...
-           10 * exp(-((t-32)*2).^2);
+Iapp_out = 10 * exp(-((t-30)*2).^2) + ...
+           10 * exp(-((t-46)*2).^2);
            %20 * exp(-((t-70)/2).^2); 
 
 
@@ -147,8 +147,8 @@ end
 function refract_time = refract_period(tInit, xInit, const, duration)
 
 refract = 0;
-initial_ap = 15;
-i = 16; % This corresponds to +1 of the initial input spike at t = 15
+initial_ap = 30;
+i = initial_ap + 1; % This corresponds to +1 of the initial input spike at t = 15
 while refract == 0
     Iapp = @(t) 10 * exp(-((t-initial_ap)*2).^2) + 10 * exp(-((t-i)*2).^2);
     [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
@@ -179,7 +179,8 @@ function trans_temp = gen_trans(tInit, xInit, const, templates, duration)
 
 % Initialising values
 temp1 = [];
-initial_ap = 15;    % This is the first input spike
+% trans_temp = {};
+initial_ap = 30;    % This is the first input spike
 % inx = 0;
 
 % Iterate through this for the number of ms of templates you want
@@ -190,6 +191,10 @@ for i = templates.refract_time:templates.refract_time + 9
     [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
     
     [~, temp2] = gen_template(t, x(:,1),duration);
+    
+%     temp2 = {temp2' - temp2(1,1)};
+%     trans_temp = [trans_temp temp2];
+    
     temp2 = temp2';
     
     % This little bit will concatenate different size matricies and fill in
