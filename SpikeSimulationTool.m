@@ -91,19 +91,19 @@ end
 
 %% Run
 % Load the templates matrix
-load(['.' filesep 'templates' filesep 'templates_test']);
+load(['.' filesep 'templates' filesep 'templates_test2_array']);
 
 % Normalize templates amplitude, max peak = 1
-for i =1:size(d,2)
-   dd = d(:,i);
-   max_d = max(d);
+for i =1:size(templates.d,2)
+   dd = templates.d(:,i);
+   max_d = max(templates.d);
    dd = dd./max_d(i);
-   d(:,i) = dd;
+   templates.d(:,i) = dd;
 end
 
 dt = 1/fs;
 try % Generate a train of extracellular spikes. There is no noise
-   [v, vv, report] = gen_train(d, Naxons, fs, total_time/dt,       ...
+   [v, vv, report] = gen_train(templates, Naxons, fs, total_time/dt,       ...
                                'SpikeRate',       sr,              ...
                                'Overlap',         overlap,         ...
                                'Recruited',       evnts.prob_start,...
