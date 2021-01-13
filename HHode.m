@@ -32,6 +32,13 @@ else
     Iapp = @(t) 0*t; % Set input to 0 when there is no transition 
 end
 
+% % Bell curve function generator
+% if length(transitions) > 1
+%     for i = 2 : length(transitions)
+%         Iapp = @(t) Iapp(t) + 10 * exp(-((t - transitions(i))*2).^2);
+%     end
+% end
+
 % calculates the ODE
 xdot(1,1) = (Iapp(t) - const.gNa * m^3 * h * (V - const.eNa) - const.gK * (V - const.eK) * n^4 - const.gLeak * (V - const.eLeak))/const.C;
 xdot(2,1) = -(m - infM)/tauM;

@@ -162,10 +162,10 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    
    if opts.RepeatTemplates
       % Random list of templates (can repeat)
-      templates_ = randi(size(templates,2), 1, Naxons);
+      templates_ = randi(size(templates.d,2), 1, Naxons);
    else
       % Random list of templates (non repeating)
-      templates_ = randperm(size(templates,2), Naxons);
+      templates_ = randperm(size(templates.d,2), Naxons);
    end
    % Progress bar
    w = waitbar(0, 'Generating simulation...');
@@ -204,7 +204,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
          isi = ceil(isi);
       end
       
-      [sptimes, non_transition, transition] = seperate_transition_spikes(isi, size(templates,1));
+      [sptimes, non_transition, transition] = seperate_transition_spikes(isi, size(templates.d,1));
       
       % Get spike times
       %sptimes = cumsum(isi);
@@ -225,8 +225,8 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       % Only if opts.overlap is false
          if i > 1
             for ii = 1:length(allsptimes)
-               idx = (sptimes >= allsptimes(ii) - size(templates,1))...
-                      & (sptimes <  allsptimes(ii) + size(templates,1));
+               idx = (sptimes >= allsptimes(ii) - size(templates.d,1))...
+                      & (sptimes <  allsptimes(ii) + size(templates.d,1));
                % Remove the opts.overlapped
                non_transition(ismember(non_transition, sptimes(idx))) = [];
                transition(ismember(transition, sptimes(idx))) = [];
@@ -265,12 +265,11 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       end
       
       % Propagate the spike shape along the spikes vector
-      v_non_transition = conv(v_non_transition,templates(:,currentTemplate), 'same');
+      v_non_transition = conv(v_non_transition,templates.d(:,currentTemplate), 'same');
       if ~isempty(transition) % Only run HHSim if there are transitions
           v_transition = amplitudes(i)*HHSim(duration/5000*1000, transition/5000*1000); % Inputs must be converted to [ms]
           v_transition = v_transition(2:end)';
       end
-      
       
       % Assign the temporal variable v_ to the matrix of axons
       vv(:,i) = v_non_transition + v_transition;

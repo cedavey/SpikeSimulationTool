@@ -49,8 +49,8 @@ close all
 function Iapp_out = Iapp_func(t)
 
 % Bell curve function
-Iapp_out = 10 * exp(-((t-30)*2).^2) + ...
-           10 * exp(-((t-46)*2).^2);
+Iapp_out = 10 * exp(-((t-30)*2).^2);
+           %10 * exp(-((t-46)*2).^2);
            %20 * exp(-((t-70)/2).^2); 
 
 
@@ -178,8 +178,8 @@ end
 function trans_temp = gen_trans(tInit, xInit, const, templates, duration)
 
 % Initialising values
-temp1 = [];
-% trans_temp = {};
+% temp1 = [];   % Used for if want to store data in matrix
+trans_temp = {};    % Used for if want to store data in cell arrays
 initial_ap = 30;    % This is the first input spike
 % inx = 0;
 
@@ -192,23 +192,26 @@ for i = templates.refract_time:templates.refract_time + 9
     
     [~, temp2] = gen_template(t, x(:,1),duration);
     
-%     temp2 = {temp2' - temp2(1,1)};
-%     trans_temp = [trans_temp temp2];
+    % This uses cell arrays instead
+    temp2 = {temp2' - temp2(1,1)};
+    trans_temp = [trans_temp temp2];
+    %
     
-    temp2 = temp2';
+    % Code below will store templates in a matrix
+%     temp2 = temp2';
     
     % This little bit will concatenate different size matricies and fill in
     % the gaps with 0's
-    [i1, j1] = ndgrid(1:size(temp1, 1), 1:size(temp1, 2));
-    [i2, j2] = ndgrid(1:size(temp2, 1), (1:size(temp2, 2)) + size(temp1, 2));
-    temp1 = accumarray([i1(:), j1(:); i2(:), j2(:)], [temp1(:); temp2(:)]);
+%     [i1, j1] = ndgrid(1:size(temp1, 1), 1:size(temp1, 2));
+%     [i2, j2] = ndgrid(1:size(temp2, 1), (1:size(temp2, 2)) + size(temp1, 2));
+%     temp1 = accumarray([i1(:), j1(:); i2(:), j2(:)], [temp1(:); temp2(:)]);
 end
 
 % Find all the 0s (which is 99% of the time going to be just at the end of
 % temp1 and change then to the initial value and then normalise the whole
 % array
-temp1(find(temp1 == 0)) = temp1(1,1);
-trans_temp = temp1 - temp1(1,1);
+% temp1(find(temp1 == 0)) = temp1(1,1);
+% trans_temp = temp1 - temp1(1,1);
 end
 
 %% Save function
