@@ -225,9 +225,12 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       % Only if opts.overlap is false
          if i > 1
             for ii = 1:length(allsptimes)
+               idx = (sptimes >= allsptimes(ii) - size(templates,1))...
+                      & (sptimes <  allsptimes(ii) + size(templates,1));
                % Remove the opts.overlapped
-               sptimes(((sptimes >= allsptimes(ii) - size(templates,1))...
-                      & (sptimes <  allsptimes(ii) + size(templates,1)))) = [];
+               non_transition(ismember(non_transition, sptimes(idx))) = [];
+               transition(ismember(transition, sptimes(idx))) = [];
+               sptimes(idx) = [];
                % Update progress
                try w = waitbar((i-1)/Naxons + ii/(length(allsptimes)*Naxons), w); catch E, delete(w); error('Manually stopped'); end
             end
@@ -239,7 +242,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       
       % Create a recording of zeroes
       v_non_transition = zeros(duration, 1);
-%       v_transition = zeros(duration, 1);
+      v_transition = zeros(duration, 1);
       spks(:,i) = zeros(duration, 1);
       
       % Assign binary spikes to the vector, the amplitude of the spikes is
@@ -250,8 +253,6 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       % Vary the amplitude
       rand_amp = 0.99 + (1.01 - 0.99) .* rand(size(non_transition)); % small variation in amplitude
       v_non_transition(non_transition) = v_non_transition(non_transition).*rand_amp;
-%       rand_amp = 0.99 + (1.01 - 0.99) .* rand(size(transition));
-%       v_transition(transition) = v_transition(transition).*rand_amp;
       
       % If the amplitude of current axon changes suddenly, scale all the
       % spikes after such time.
@@ -265,10 +266,14 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       
       % Propagate the spike shape along the spikes vector
       v_non_transition = conv(v_non_transition,templates(:,currentTemplate), 'same');
-      v_transition = HHSim(duration/5000*1000, transition/5000*1000);
+      if ~isempty(transition) % Only run HHSim if there are transitions
+          v_transition = amplitudes(i)*HHSim(duration/5000*1000, transition/5000*1000); % Inputs must be converted to [ms]
+          v_transition = v_transition(2:end)';
+      end
+      
       
       % Assign the temporal variable v_ to the matrix of axons
-      vv(:,i) = v_non_transition + v_transition(1:end-1)';
+      vv(:,i) = v_non_transition + v_transition;
       
       % Save the sike locations (times) in report.locs
       locs{i} = sptimes;

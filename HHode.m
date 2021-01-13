@@ -21,16 +21,15 @@ infM = mAlpha * tauM;
 tauH = 1/(hAlpha + hBeta);
 infH = hAlpha * tauH;
 
-% Iapp function
+% Input current function generator
 if ~isempty(transitions)
-    Iapp = @(t) 10 * exp(-((t - transitions(1))*2).^2);
-end
-
-% Bell curve function generator
-if length(transitions) > 1
+    Iapp = @(t) 10 * exp(-((t - transitions(1))*2).^2); % Initialize Iapp
     for i = 2 : length(transitions)
+        % Add more inputs
         Iapp = @(t) Iapp(t) + 10 * exp(-((t - transitions(i))*2).^2);
     end
+else
+    Iapp = @(t) 0*t; % Set input to 0 when there is no transition 
 end
 
 % calculates the ODE
