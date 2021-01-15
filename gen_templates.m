@@ -19,7 +19,7 @@ close all
     const.gLeak = 0.3;
     const.C     = 1.0;               % Capacitance of membrane
 
-    duration = 100; % [msec]
+    duration = 200; % [msec]
     tInit    = [0 duration];
     xInit    = [-65; 0.052; 0.059; 0.317];
 
@@ -34,7 +34,7 @@ close all
     
     templates.refract_time = refract_period(tInit, xInit, const, duration);
     
-    templates.transition = gen_trans(tInit, xInit, const, templates, duration);
+    [templates.transition, templates.t, templates.d] = gen_trans(tInit, xInit, const, templates, duration);
 
     % Plot
     plot_simulation(t, x, duration, Iapp, templates);
@@ -50,7 +50,7 @@ function Iapp_out = Iapp_func(t)
 
 % Bell curve function
 Iapp_out = 10 * exp(-((t-30)*2).^2);
-           %10 * exp(-((t-46)*2).^2);
+           %10 * exp(-((t-66)*2).^2);
            %20 * exp(-((t-70)/2).^2); 
 
 
@@ -90,11 +90,11 @@ end
 % If there is a large change in the first 10 ms, ignore these assuming the
 % system is going back into equilibrium
 start_ap = find(slope(10:end) >= 1, 1, 'first') + 10;   % Start AP index
-end_ap = find(slope >=0.05 | slope <= -0.03, 1, 'last');    % End AP index
+%end_ap = find(slope >=0.05 | slope <= -0.05, 1, 'last');    % End AP index
 
 % Extracting only the relevant template
-new_t = new_t(start_ap - 5:end_ap);
-new_template = new_template(start_ap - 5:end_ap);
+new_t = new_t(start_ap - 5:end);
+new_template = new_template(start_ap - 5:end);
 
 end
 
@@ -175,7 +175,7 @@ end
 % HOWEVER one issue that is not currently addressed (on the very very rare
 % occasion) is if whilst generating the action potential, if somehow a value
 % is == 0, then this will cause an irregularity in the template
-function trans_temp = gen_trans(tInit, xInit, const, templates, duration)
+function [trans_temp, t, d] = gen_trans(tInit, xInit, const, templates, duration)
 
 % Initialising values
 % temp1 = [];   % Used for if want to store data in matrix
@@ -186,16 +186,24 @@ initial_ap = 30;    % This is the first input spike
 % Iterate through this for the number of ms of templates you want
 % It is currently at 10 templates from right after the abs refractory
 % period
-for i = templates.refract_time:templates.refract_time + 9
+for i = templates.refract_time:templates.refract_time + (size(templates.d, 2) - templates.refract_time)
     Iapp = @(t) 10 * exp(-((t-initial_ap) * 2).^2) + 10 * exp(-((t-(initial_ap + i))*2).^2);
     [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
     
-    [~, temp2] = gen_template(t, x(:,1),duration);
+    [temp2_t, temp2] = gen_template(t, x(:,1),(duration));
     
     % This uses cell arrays instead
     temp2 = {temp2' - temp2(1,1)};
     trans_temp = [trans_temp temp2];
-    %
+    
+    % Checks if the last 3 templates have the same max value. If they do
+    % then break out of this and record value to adjust the main template
+    if i > (templates.refract_time + 3) && (max(trans_temp{:, i - templates.refract_time}) == max(trans_temp{:, (i - templates.refract_time - 1)})) ...
+            && (max(trans_temp{:, i - templates.refract_time}) == max(trans_temp{:, (i - templates.refract_time - 2)})) ...
+            && (max(trans_temp{:, (i - templates.refract_time)}) == max(trans_temp{:, (i - templates.refract_time - 3)}))
+        trans_temp = {trans_temp{:, 1:i - templates.refract_time - 3}};
+        break
+    end
     
     % Code below will store templates in a matrix
 %     temp2 = temp2';
@@ -206,6 +214,10 @@ for i = templates.refract_time:templates.refract_time + 9
 %     [i2, j2] = ndgrid(1:size(temp2, 1), (1:size(temp2, 2)) + size(temp1, 2));
 %     temp1 = accumarray([i1(:), j1(:); i2(:), j2(:)], [temp1(:); temp2(:)]);
 end
+
+% Adjust the template length
+t = templates.t(1:find(temp2_t >= initial_ap + i - 3, 1, 'first'));
+d = templates.d(1:length(t));
 
 % Find all the 0s (which is 99% of the time going to be just at the end of
 % temp1 and change then to the initial value and then normalise the whole
@@ -218,6 +230,7 @@ end
 % Saves the struct template into a .mat file for SST to open
 function save_templates(templates)
 
+% This will then inverse the arrays to work with main code
 templates.d = (templates.d + abs(templates.d(1)))';
 templates.t = templates.t';
 

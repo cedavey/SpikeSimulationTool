@@ -125,7 +125,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    spks          = zeros(duration, Naxons);
    locs          = cell(Naxons, 1);
    max_spike_num = ceil(max(opts.SpikeRate(:)*duration*dt)); % Maximum number of spikes
-   rest          = round(100e-3/dt);% Refractory period in seconds
+%    rest          = round(100e-3/dt);% Refractory period in seconds
    
    % Output variable
    report = struct;
@@ -266,7 +266,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       
       % Propagate the spike shape along the spikes vector
       v_non_transition = conv(v_non_transition,templates.d(:,currentTemplate), 'same');
-      if ~isempty(transition) % Only run HHSim if there are transitions
+      if ~isempty(transition) % Only run HHSim if there are transitions                                             % ADD TRANSITION TEMPLATES HERE
           v_transition = amplitudes(i)*HHSim(duration/5000*1000, transition/5000*1000); % Inputs must be converted to [ms]
           v_transition = v_transition(2:end)';
       end
@@ -297,7 +297,6 @@ end
 % Seperates the spikes which are close together and have transitions between them and
 % those far apart without transitions.
 function [sptimes, non_transition, transition] = separate_transition_spikes(isi, duration_of_spike)
-
 % Calculate times of all spikes
 sptimes = cumsum(isi);
 
