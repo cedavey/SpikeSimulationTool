@@ -90,55 +90,20 @@ end
 % If there is a large change in the first 10 ms, ignore these assuming the
 % system is going back into equilibrium
 start_ap = find(slope(10:end) >= 1, 1, 'first') + 10;   % Start AP index
-%end_ap = find(slope >=0.05 | slope <= -0.05, 1, 'last');    % End AP index
 
-% Extracting only the relevant template
-new_t = new_t(start_ap - 5:end);
-new_template = new_template(start_ap - 5:end);
-
+% Function will determine between a single spike or two spikes to determine
+% where to fix end_ap as
+pks = findpeaks(data);
+pks = pks(pks >=0);
+if length(pks) >= 2 && diff(abs(pks([1,2]))) < 5
+    end_ap = find(slope >=0.05 | slope <= -0.05, 1, 'last');    % End AP index when 2 spikes
+else
+    end_ap = length(new_t); % When single spike
 end
 
-%% PLOT function
-function plot_simulation(t, x, duration, Iapp, template)
-% Plot action potential
-
-subplot(2,1,1);
-hold on
-yyaxis left
-plot(t, x(:,1));
-axis([0 duration -80 60]);
-xlabel('time (ms)');
-ylabel('voltage (mV)');
-
-% Plot current applied
-Iapp_ = Iapp(t);
-if numel(Iapp_) == 1; Iapp_ = Iapp_*ones(size(t)); end % Changes a constant Iapp_ to an array for plotting
-
-% Plot new template
-plot(template.t, template.d, '-r');
-
-yyaxis right
-p = plot(t, Iapp_, '-');
-p.Color(4) = 0.2; % Change transparency
-axis([0, duration, -(4*max(abs(Iapp_))), (3*max(abs(Iapp_)))]);
-xlabel('time (ms)');
-ylabel('Current applied');
-
-legend('AP voltage', 'Extracted template','Applied current');
-hold off
-
-% Plot the m, h and n variables
-subplot(2,1,2);
-hold on
-plot(t, x(:,2));
-plot(t, x(:,3));
-plot(t, x(:,4));
-ylim([-0.1 1.1]);
-xlabel('Time (ms)');
-ylabel('Activation');
-title('Channel activations');
-legend('m', 'h', 'n');
-hold off
+% Extracting only the relevant template
+new_t = new_t(start_ap - 5:end_ap);
+new_template = new_template(start_ap - 5:end_ap);
 
 end
 
@@ -241,4 +206,48 @@ if file
 else
     fprintf('User didnt''t chose a file location. Template was not saved\n');
 end
+end
+
+%% PLOT function
+function plot_simulation(t, x, duration, Iapp, template)
+% Plot action potential
+
+subplot(2,1,1);
+hold on
+yyaxis left
+plot(t, x(:,1));
+axis([0 duration -80 60]);
+xlabel('time (ms)');
+ylabel('voltage (mV)');
+
+% Plot current applied
+Iapp_ = Iapp(t);
+if numel(Iapp_) == 1; Iapp_ = Iapp_*ones(size(t)); end % Changes a constant Iapp_ to an array for plotting
+
+% Plot new template
+plot(template.t, template.d, '-r');
+
+yyaxis right
+p = plot(t, Iapp_, '-');
+p.Color(4) = 0.2; % Change transparency
+axis([0, duration, -(4*max(abs(Iapp_))), (3*max(abs(Iapp_)))]);
+xlabel('time (ms)');
+ylabel('Current applied');
+
+legend('AP voltage', 'Extracted template','Applied current');
+hold off
+
+% Plot the m, h and n variables
+subplot(2,1,2);
+hold on
+plot(t, x(:,2));
+plot(t, x(:,3));
+plot(t, x(:,4));
+ylim([-0.1 1.1]);
+xlabel('Time (ms)');
+ylabel('Activation');
+title('Channel activations');
+legend('m', 'h', 'n');
+hold off
+
 end
