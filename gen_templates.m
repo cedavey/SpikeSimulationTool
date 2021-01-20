@@ -80,7 +80,7 @@ while refract == 0
     pks = pks(pks >= 0);
     if length(pks) >= 2 && diff(abs(pks([1,2]))) < 5    % If more than 2 peaks above 0 and the diff between the two is less than 5
         refract = 1;    % Change refract to be true to break while loop
-        refract_time = i - initial_ap;  % This refractory time is the time between the TWO INPUT SPIKES
+        refract_time = i - initial_ap;  % This refractory time is the time between the TWO INPUT SPIKES. AT this time is when the first following spike can occur
         refract_index = find(int_t >= i, 1, 'first') - find(int_t >= initial_ap, 1, 'first');   % This refractory index is the values within the time matrix between the TWO INPUT SPIKES
     end
     if i > duration
@@ -172,11 +172,20 @@ initial_ap_index = find(templates.t == initial_ap);
 % Assumes that the following spike dynamics are same as the first
 index_bw_ap = templates.end_index - start_ap;
 
+% Find the maximum value of the templates.transition cell array for
+% normalisation
+max_val = max(cellfun(@(x) max(x), templates.transition));
+
 % Runs through the transition templates and shortens them to the correct
 % length
 for i = 1:size(templates.transition,2)
     templates.transition{i} = templates.transition{i}(1:initial_ap_index ...
-        + templates.abs_refract_index - 1 + i + index_bw_ap); 
+        + templates.abs_refract_index - 1 + i + index_bw_ap);
+    
+    % Normalises the templates amplitude so that the max peak is = 1
+    temp = templates.transition{i};
+    temp = temp./max_val;
+    templates.transition{i} = temp;
 end
 end
 
@@ -232,7 +241,7 @@ function save_templates(templates)
 % This will then inverse the arrays to work with main code
 templates.d = templates.d + abs(templates.d(1));
 
-[file, path] = uiputfile(['templates' filesep 'template_test2.mat'], 'Save file name'); % Will want to change the name
+[file, path] = uiputfile(['templates' filesep 'templates_test3.mat'], 'Save file name'); % Will want to change the name
 if file
     file_name = [path filesep file];
     save(file_name, 'templates');
