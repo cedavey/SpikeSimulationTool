@@ -40,6 +40,8 @@ pre_noise   = true;                 % Append period of just noise at the start
 do_filter   = true;                 % Bandpass filter the signal
 passband    = [40 1200];%[80, 600]; % Passband
 PLOT        = false;
+templates   = [];                   % Initialize templates
+templates_fn= 'templates_test_struct.mat'; % Default templates file
 
 if nargin >= 1
    data       = varargin{1};
@@ -58,6 +60,7 @@ if nargin >= 1
    do_filter  = data.do_filter;
    passband   = data.passband;
    PLOT       = data.PLOT;
+   templates_fn= data.templates_fn;
    
    swtch      = varargin{2};    % Pass in swtch struct for evnts parameters
    events     = varargin{3};    % Pass in events struct for evnts parameters
@@ -91,7 +94,11 @@ end
 
 %% Run
 % Load the templates matrix
-load(['.' filesep 'templates' filesep 'templates_test2_array']);
+if isempty(data.templates)
+    load(['.' filesep 'templates' filesep templates_fn]);
+else
+    templates = data.templates; % Loads generated template from templatesApp.mlapp
+end
 
 % Normalize templates amplitude, max peak = 1
 for i =1:size(templates.d,2)
