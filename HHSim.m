@@ -17,15 +17,15 @@ templates.refract_time = refract_period(tInit, xInit, parameters, duration);
 
 templates.transition = gen_trans(tInit, xInit, parameters, templates, duration);
 
+templates.HHparameters = parameters;
+
 end
 
 %% Iapp function
 function Iapp_out = Iapp_func(t)
 
 % Bell curve function
-Iapp_out = 10 * exp(-((t-30)*2).^2);
-           %10 * exp(-((t-46)*2).^2);
-           %20 * exp(-((t-70)/2).^2); 
+Iapp_out = 15 * exp(-((t-30)*2).^2);
 
 end
 
