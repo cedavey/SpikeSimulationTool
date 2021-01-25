@@ -272,7 +272,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
               
               temp(transition_cells{j}(1) + floor((transition_cells{j}(2)-transition_cells{j}(1))/2)) = amplitudes(i);
               
-              template_selection = diff(transition_cells{j}) - templates.abs_refract_index - 6;
+              template_selection = diff(transition_cells{j}) - templates.abs_refract_index - templates.initial_ap_index;
               temp = conv(temp, templates.transition{template_selection}, 'same');
               v_transition = v_transition + temp;
           end
@@ -345,22 +345,66 @@ transition = sptimes(~ismember(sptimes, non_transition));
 % Removes any value from transition if the difference is smaller than the
 % absolute refractory period
 remove = find(diff(transition) < templates.abs_refract_index);
-for i = 1:length(remove)
-    if (((remove(i) + 2) <= length(transition)) && (transition(remove(i) + 2) - transition(remove(i) + 1)) > duration_of_spike) ...
-            || (remove(i) + 2) > length(transition)
-        transition([remove(i), remove(i) + 1]) = [];
-        remove = remove - 2;
-    else
-        transition(remove(i)) = [];
-        remove = remove - 1;
-    end
+
+if remove(1) == 1 && remove(2) == 2
+    transition(remove(1)) = 0;
+elseif remove(1) == 1
+    transition([remove(1), remove(1) + 1]) = 0;
 end
-   
+
+for i = 1:length(remove)
+    if remove(i) == 1
+        continue
+    elseif remove(i) + 2 > length(transition)
+        transition([remove(i), remove(i) + 1]) = 0;
+    elseif (transition(remove(i) + 2) - transition(remove(i) + 1) > duration_of_spike)
+        if transition(remove(i)) - transition(remove(i) - 1) > duration_of_spike
+            transition([remove(i), remove(i) + 1]) = 0;
+        else
+            transition(remove(i) + 1) = 0;
+        end
+    else
+        transition(remove(i)) = 0;
+    end
+end  
+transition(find(transition == 0)) = [];
+
+% for i = 1:length(remove)
+%     if remove(i) + 2 > length(transition)
+%         transition([remove(i), remove(i) + 1]) = [];
+%         remove = remove - 2;
+%     elseif remove(i) == 1
+%         if remove(i + 1) == 2
+%             transition(remove(i)) = [];
+%             remove = remove - 1;
+%         else
+%             tra
+%         end
+%     elseif ((transition(remove(i) + 2) - transition(remove(i) + 1)) > duration_of_spike) && ((transition(remove(i)) - transition(remove(i) - 1)) > duration_of_spike)          
+%         transition([remove(i), remove(i) + 1]) = [];
+%         remove = remove - 2;
+%     elseif transition(remove(i)) - transition(remove(i) - 1) < duration_of_spike
+%         transition(remove(i - 1)) = [];
+%         remove = remove - 1;
+%     else
+%         transition(remove(i)) = [];
+%         remove = remove - 1;
+%     end
+% end
 
 % Find groups of transitioning spikes and split into cells
 group_start_n_end = [0; find(diff(transition) > duration_of_spike); length(transition)];
+multi = find(diff(group_start_n_end) > 2);
+count = 0;
 for i = 1 : length(group_start_n_end) - 1
-    transition_cells{i} = transition(group_start_n_end(i)+1 : group_start_n_end(i+1));
+    count = count + 1;
+    if i == multi
+        transition_cells{count} = transition(group_start_n_end(i) + 1 : group_start_n_end(i) + 2);
+        count = count + 1;
+        transition_cells{count} = transition(group_start_n_end(i) + 2: group_start_n_end(i) + 3);
+    else
+        transition_cells{count} = transition(group_start_n_end(i) + 1 : group_start_n_end(i + 1));
+    end
 end
 
 end
