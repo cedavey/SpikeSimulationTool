@@ -94,6 +94,7 @@ end
 
 %% Run
 % Load the templates matrix
+
 if isempty(data.templates)
     load(['.' filesep 'templates' filesep templates_fn]);
 else
