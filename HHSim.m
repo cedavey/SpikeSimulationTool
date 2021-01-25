@@ -58,9 +58,10 @@ end_ap = find(slope >=0.05 | slope <= -0.03, 1, 'last');    % End AP index
 new_t = new_t(start_ap - 5:end_ap);
 new_template = new_template(start_ap - 5:end_ap);
 
-% Change to column vector and normalize to 0
+% Change to column vector and normalize to 0 and normalize max
 new_t = new_t';
 new_template = (new_template + abs(new_template(1)))';
+new_template = new_template / max(new_template);
 
 end
 
@@ -113,7 +114,7 @@ for i = templates.refract_time:templates.refract_time + 9
     [~, temp2] = gen_template(t, x(:,1),duration);
     
     % This uses cell arrays instead
-    temp2 = {temp2' - temp2(1,1)};
+    temp2 = {temp2 - temp2(1,1)};
     trans_temp = [trans_temp temp2];
     
 end
