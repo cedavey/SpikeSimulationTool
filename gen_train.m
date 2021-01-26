@@ -125,7 +125,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    spks          = zeros(duration, Naxons);
    locs          = cell(Naxons, 1);
    max_spike_num = ceil(max(opts.SpikeRate(:)*duration*dt)); % Maximum number of spikes
-   rest          = round(100e-3/dt);% Refractory period in seconds
+%    rest          = round(100e-3/dt);% Refractory period in seconds
    
    % Output variable
    report = struct;
@@ -204,7 +204,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
          %isi(isi < (size(templates,1) + rest)) = []; % isi(isi < (size(templates,1) + rest)) = size(templates,1) + rest; % isi(isi < size(templates,1)) = size(templates,1);
          isi = ceil(isi);
       end
-      
+
       [sptimes, non_transition, transition] = separate_transition_spikes(isi, duration_of_spike);
       
       % Remove spikes that exceed the duration of the recording or the end
@@ -212,7 +212,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       sptimes(sptimes > end_time(i)) = [];
       non_transition(non_transition > end_time(i)) = [];
       transition(transition > end_time(i)) = [];
-      % Remove spikes that occur befor the axon is recruited
+      % Remove spikes that occur before the axon is recruited
       sptimes(sptimes < st_time(i)) = [];
       non_transition(non_transition < st_time(i)) = [];
       transition(transition < st_time(i)) = [];
@@ -270,6 +270,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       
       % Propagate the spike shape along the spikes vector
       v_non_transition = conv(v_non_transition,templates.d(:,currentTemplate), 'same');
+
       if ~isempty(transition_cells) % Only run gen_transitions if there are transitions
           v_transition = amplitudes(i)*gen_transitions(transition_cells, templates(currentTemplate).transition, duration);
       end
@@ -295,4 +296,110 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       
    % Close progress bar
    try delete(w); catch E, fprintf(2,'\t%s\n',E.message); end
+
+end
+
+% Seperates the spikes which are close together and have transitions between them and
+% those far apart without transitions.
+function [sptimes, non_transition, transition, transition_cells] = separate_transition_spikes(isi, templates, duration_of_spike)
+% Calculate times of all spikes
+sptimes = cumsum(isi);
+
+% Determine the times for spikes that do not transition
+non_transition    = sptimes(1);
+for i = 1 : length(isi)-1
+   if isi(i) <= duration_of_spike  || isi(i+1) <= duration_of_spike
+       % When the isi for the next 2 spikes is <= rest, adds the 
+       % current isi to the current cumulative sum
+       non_transition(end,1) = sptimes(i+1); 
+   elseif isi(i) > duration_of_spike
+       % When the isi for the spikes is > rest, it creates a new index to
+       % indicate the next normal (without transition) spike
+       non_transition(end+1,1) = sptimes(i+1);
+   else
+       error('Error: There is a missing value in sptimes_normal');
+   end
+   
+end
+% Start and end exceptions that the for loop cant handle properly
+% Since the first spike doesnt have a spike before it, it can be
+% non-transitioning when the isi after it is > rest 
+if ( isi(2) > duration_of_spike ) && ( non_transition(1) ~= sptimes(1) )
+    non_transition = [sptimes(1); non_transition]; 
+end
+% Clears the last sptimes_normal if the last isi is less than the rest time
+% since the for loop above can't check the preallocated last value (may
+% need to change this when considering total duration of simulation)
+if isi(end) <= duration_of_spike 
+    non_transition(end) = []; 
+end
+
+% Determines the times of spikes with transitions (mutually exclusive to
+% times without transitions)
+transition = sptimes(~ismember(sptimes, non_transition));
+
+% Removes any value from transition if the difference is smaller than the
+% absolute refractory period
+remove = find(diff(transition) < templates.abs_refract_index);
+
+if remove(1) == 1 && remove(2) == 2
+    transition(remove(1)) = 0;
+elseif remove(1) == 1
+    transition([remove(1), remove(1) + 1]) = 0;
+end
+
+for i = 1:length(remove)
+    if remove(i) == 1
+        continue
+    elseif remove(i) + 2 > length(transition)
+        transition([remove(i), remove(i) + 1]) = 0;
+    elseif (transition(remove(i) + 2) - transition(remove(i) + 1) > duration_of_spike)
+        if transition(remove(i)) - transition(remove(i) - 1) > duration_of_spike
+            transition([remove(i), remove(i) + 1]) = 0;
+        else
+            transition(remove(i) + 1) = 0;
+        end
+    else
+        transition(remove(i)) = 0;
+    end
+end  
+transition(transition == 0) = [];
+
+% for i = 1:length(remove)
+%     if remove(i) + 2 > length(transition)
+%         transition([remove(i), remove(i) + 1]) = [];
+%         remove = remove - 2;
+%     elseif remove(i) == 1
+%         if remove(i + 1) == 2
+%             transition(remove(i)) = [];
+%             remove = remove - 1;
+%         else
+%             tra
+%         end
+%     elseif ((transition(remove(i) + 2) - transition(remove(i) + 1)) > duration_of_spike) && ((transition(remove(i)) - transition(remove(i) - 1)) > duration_of_spike)          
+%         transition([remove(i), remove(i) + 1]) = [];
+%         remove = remove - 2;
+%     elseif transition(remove(i)) - transition(remove(i) - 1) < duration_of_spike
+%         transition(remove(i - 1)) = [];
+%         remove = remove - 1;
+%     else
+%         transition(remove(i)) = [];
+%         remove = remove - 1;
+%     end
+% end
+
+% Find groups of transitioning spikes and split into cells
+group_start_n_end = [0; find(diff(transition) > duration_of_spike); length(transition)];
+multi = find(diff(group_start_n_end) > 2);
+count = 0;
+for i = 1 : length(group_start_n_end) - 1
+    count = count + 1;
+    if i == multi
+        transition_cells{count} = transition(group_start_n_end(i) + 1 : group_start_n_end(i) + 2);
+        count = count + 1;
+        transition_cells{count} = transition(group_start_n_end(i) + 2: group_start_n_end(i) + 3);
+    else
+        transition_cells{count} = transition(group_start_n_end(i) + 1 : group_start_n_end(i + 1));
+    end
+end
 end

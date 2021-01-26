@@ -94,6 +94,7 @@ end
 
 %% Run
 % Load the templates matrix
+
 if isempty(data.templates)
     % Find the directory path to templates folder
     [path,~,~] = fileparts(mfilename('fullpath'));
