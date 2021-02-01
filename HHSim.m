@@ -7,27 +7,47 @@ xInit    = [-65; 0.052; 0.059; 0.317];
 templates.initial_ap = 30;
 templates.initial_ap_index = find(0:1/parameters.sampling_rate*1000:duration >= templates.initial_ap, 1, 'first');
 
+% Progress bar
+w = waitbar(0, 'Generating templates...');
+
 % Calculate the refractory period
 [templates.abs_refract_time, templates.abs_refract_index, templates.rel_refract_time, templates.rel_refract_index] = refract_period(tInit, xInit, duration, templates, parameters);
+
+try w = waitbar(1/7, w); catch, delete(w); error('Manually stopped'); end
 
 % Calculate when second input will generate same output as previous output
 % and generate transition templates
 templates.transition = gen_trans(tInit, xInit, duration, templates, parameters);
 
+try w = waitbar(2/7, w); catch, delete(w); error('Manually stopped'); end
+
 % Input function
 Iapp = @(t) 10*exp(-((t - templates.initial_ap)*2).^2);
+
+try w = waitbar(3/7, w); catch, delete(w); error('Manually stopped'); end
 
 % Runs ODE
 [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, parameters);
 
+try w = waitbar(4/7, w); catch, delete(w); error('Manually stopped'); end
+
 % Interpolate data
 [interp_t, interp_d] = interpolate(t, x(:,1), duration, parameters);
+
+try w = waitbar(5/7, w); catch, delete(w); error('Manually stopped'); end
 
 % Generate single spike template
 [templates.t, templates.d] = gen_template(interp_t, interp_d, 1, templates);
 
+try w = waitbar(6/7, w); catch, delete(w); error('Manually stopped'); end
+
 % Adjust the transition template lengths
 templates = adj_templates(templates);
+
+try w = waitbar(7/7, w); catch, delete(w); error('Manually stopped'); end
+
+% Close progress bar
+try delete(w); catch E, fprintf(2,'\t%s\n',E.message); end
 
 end
 
