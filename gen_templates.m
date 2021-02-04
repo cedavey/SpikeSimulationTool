@@ -5,7 +5,7 @@
 % Function that generates and plots action potentials using the Hodgkin-Huxley model
 
 clear all
-close all
+%close all
 
 % Initialize channel constants
 % All these also can be varied
@@ -32,7 +32,7 @@ templates.initial_ap = 30;
 [templates.end_time, templates.end_index, templates.transition] = gen_trans(tInit, xInit, const, duration, sampling_rate, templates);
 
 % Input function
-Iapp = @(t) 10*exp(-((t - templates.initial_ap)*2).^2);
+Iapp = @(t) 10*exp(-((t - templates.initial_ap)*2).^2) + 10*exp(-((t - 50)*2).^2);
 
 % Runs ODE
 [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
@@ -50,7 +50,7 @@ templates = adj_templates(templates);
 plot_simulation(t, x, duration, Iapp, templates);
 
 % Save the templates struct as a .mat file
-save_templates(templates);
+%save_templates(templates);
 
 %% Interpolate data function
 
