@@ -11,40 +11,40 @@ templates.initial_ap_index = find(0:1/parameters.sampling_rate*1000:duration >= 
 w = waitbar(0, 'Generating templates...');
 
 % Calculate the refractory period
-[templates.abs_refract_time, templates.abs_refract_index, templates.rel_refract_time, templates.rel_refract_index] = refract_period(tInit, xInit, duration, templates, parameters);
+[templates.abs_refract_time, templates.abs_refract_index, templates.rel_refract_time, templates.rel_refract_index] = refract_period(tInit, xInit, duration, templates, parameters, w);
 
-try w = waitbar(1/7, w); catch, delete(w); error('Manually stopped'); end
+try w = waitbar(2/8, w); catch, delete(w); error('Manually stopped'); end
 
 % Calculate when second input will generate same output as previous output
 % and generate transition templates
 templates.transition = gen_trans(tInit, xInit, duration, templates, parameters);
 
-try w = waitbar(2/7, w); catch, delete(w); error('Manually stopped'); end
+try w = waitbar(3/8, w); catch, delete(w); error('Manually stopped'); end
 
 % Input function
 Iapp = @(t) 10*exp(-((t - templates.initial_ap)*2).^2);
 
-try w = waitbar(3/7, w); catch, delete(w); error('Manually stopped'); end
+try w = waitbar(4/8, w); catch, delete(w); error('Manually stopped'); end
 
 % Runs ODE
 [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, parameters);
 
-try w = waitbar(4/7, w); catch, delete(w); error('Manually stopped'); end
+try w = waitbar(5/8, w); catch, delete(w); error('Manually stopped'); end
 
 % Interpolate data
 [interp_t, interp_d] = interpolate(t, x(:,1), duration, parameters);
 
-try w = waitbar(5/7, w); catch, delete(w); error('Manually stopped'); end
+try w = waitbar(6/8, w); catch, delete(w); error('Manually stopped'); end
 
 % Generate single spike template
 [templates.t, templates.d] = gen_template(interp_t, interp_d, 1, templates);
 
-try w = waitbar(6/7, w); catch, delete(w); error('Manually stopped'); end
+try w = waitbar(7/8, w); catch, delete(w); error('Manually stopped'); end
 
 % Adjust the transition template lengths
 templates = adj_templates(templates);
 
-try w = waitbar(7/7, w); catch, delete(w); error('Manually stopped'); end
+try w = waitbar(8/8, w); catch, delete(w); error('Manually stopped'); end
 
 % Close progress bar
 try delete(w); catch E, fprintf(2,'\t%s\n',E.message); end
@@ -63,9 +63,11 @@ end
 
 %% Calculate the absolute refractory period
 
-function [refract_time, refract_index, rel_refract_time, rel_refract_index] = refract_period(tInit, xInit, duration, templates, parameters)
+function [refract_time, refract_index, rel_refract_time, rel_refract_index] = refract_period(tInit, xInit, duration, templates, parameters, w)
 
-max_sampling_rate = 20000; % Aribitrary number right now
+max_sampling_rate = 100000;
+buffer = 0.0001;
+
 refract = 0;
 i = templates.initial_ap; % 1+ to the initial_ap that was defined
 
@@ -92,6 +94,8 @@ while refract == 0
     end
 end
 
+try w = waitbar(1/8, w); catch, delete(w); error('Manually stopped'); end
+
 % Finding the relative refractory period at max sampling rate to keep
 % consistency
 count = 0;
@@ -106,10 +110,14 @@ for i = max_sr_refract_time + templates.initial_ap:1/max_sampling_rate * 1000:du
     rel_temp = [rel_temp rel_d];
     
     if (i > max_sr_refract_time + templates.initial_ap + 3)...
-            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + 0.002) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - max_sampling_rate/1000}) - 0.002))...
-            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + 0.002) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 2}) - 0.002))...
-            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + 0.002) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 3}) - 0.002))
-        rel_refract_index = find(0:1/parameters.sampling_rate * 1000:duration >= (i - 3 - templates.initial_ap), 1, 'first');   % Takes first value that is larger than the one found with max_sampling_rate. This value is FROM initial spike at index = 151
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - max_sampling_rate/1000}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 2}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 3}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 4}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 5}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 6}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 7}) - buffer))
+        rel_refract_index = find(0:1/parameters.sampling_rate * 1000:duration >= (i - 7 - templates.initial_ap), 1, 'first');   % Takes first value that is larger than the one found with max_sampling_rate. This value is FROM initial spike at index = 151
         rel_refract_time = 1/parameters.sampling_rate * 1000 * (rel_refract_index - 1);    % This value is FROM the initial spike at t = 30
         break
     end

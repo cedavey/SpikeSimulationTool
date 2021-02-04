@@ -21,7 +21,7 @@ const.C     = 1.0;               % Capacitance of membrane
 duration = 200; % [msec]
 tInit    = [0 duration];
 xInit    = [-65; 0.052; 0.059; 0.317];
-templates.sampling_rate = 17000;
+templates.sampling_rate = 5000;
 templates.initial_ap = 30;
 templates.initial_ap_index = find(0:1/templates.sampling_rate*1000:duration >= templates.initial_ap, 1, 'first');
 
@@ -67,13 +67,13 @@ end
 
 function [refract_time, refract_index, rel_refract_time, rel_refract_index] = refract_period(tInit, xInit, const, duration, templates)
 
-max_sampling_rate = 20000; % Aribitrary number right now
+max_sampling_rate = 100000; % Aribitrary number right now
 refract = 0;
 i = templates.initial_ap; % 1+ to the initial_ap that was defined
 
 % Will loop until refract variable becomes true
 while refract == 0
-    i = i + 1/max_sampling_rate*1000; % This time should be 1/sampling_rate
+    i = i + 1/max_sampling_rate*1000 % This time should be 1/sampling_rate
     Iapp = @(t) 10 * exp(-((t - templates.initial_ap) * 2).^2) + 10 * exp(-((t - i) * 2).^2);
     [~, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
 %     [int_t, int_d] = interpolate(t, x(:,1), duration, templates.sampling_rate);
@@ -98,6 +98,7 @@ end
 % consistency
 count = 0;
 rel_temp = [];
+buffer = 0.0001;
 
 for i = max_sr_refract_time + templates.initial_ap:1/max_sampling_rate * 1000:duration
     count = count + 1;
@@ -107,11 +108,15 @@ for i = max_sr_refract_time + templates.initial_ap:1/max_sampling_rate * 1000:du
     rel_d = {d - d(1)};
     rel_temp = [rel_temp rel_d];
     
-    if (i > max_sr_refract_time + templates.initial_ap + 3)...
-            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + 0.002) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - max_sampling_rate/1000}) - 0.002))...
-            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + 0.002) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 2}) - 0.002))...
-            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + 0.002) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 3}) - 0.002))
-        rel_refract_index = find(0:1/templates.sampling_rate * 1000:duration >= (i - 3 - templates.initial_ap), 1, 'first');   % Takes first value that is larger than the one found with max_sampling_rate. This value is FROM initial spike at index = 151
+    if (i > max_sr_refract_time + templates.initial_ap + 7)...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - max_sampling_rate/1000}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 2}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 3}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 4}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 5}) - buffer))...
+            %&& ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 6}) - buffer))...
+            %&& ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 7}) - buffer))
+        rel_refract_index = find(0:1/templates.sampling_rate * 1000:duration >= (i - 5 - templates.initial_ap), 1, 'first');   % Takes first value that is larger than the one found with max_sampling_rate. This value is FROM initial spike at index = 151
         rel_refract_time = 1/templates.sampling_rate * 1000 * (rel_refract_index - 1);    % This value is FROM the initial spike at t = 30
         break
     end
