@@ -96,18 +96,13 @@ end
 % Load the templates matrix
 
 if isempty(data.templates)
-    load(['.' filesep 'templates' filesep templates_fn]);
+    % Find the directory path to templates folder
+    [path,~,~] = fileparts(mfilename('fullpath'));
+    load([path filesep 'templates' filesep templates_fn]);
 else
     templates = data.templates; % Loads generated template from templatesApp.mlapp
 end
 
-% Normalize templates amplitude, max peak = 1
-for i =1:size(templates.d,2)
-   dd = templates.d(:,i);
-   max_d = max(templates.d);
-   dd = dd./max_d(i);
-   templates.d(:,i) = dd;
-end
 
 dt = 1/fs;
 try % Generate a train of extracellular spikes. There is no noise
@@ -205,14 +200,14 @@ if PLOT
    naxons = size(vsim.axons, 2);
    % Plot templates
    figure;
-   for i = 1:naxons
+   for temp = 1:naxons
       nr = ceil(sqrt(naxons));
       nc = ceil(naxons/3);
       if naxons == 3
          nc = 1; nr = 3;
       end
-      subplot(nc, nr, i);
-      plot(vv( max(vsim.report.locs{i}(1) - 100, 1) : min(vsim.report.locs{i}(1) + 100, size(vv,1)), i));
+      subplot(nc, nr, temp);
+      plot(vv( max(vsim.report.locs{temp}(1) - 100, 1) : min(vsim.report.locs{temp}(1) + 100, size(vv,1)), temp));
    end
    clear vv
 end

@@ -5,7 +5,7 @@
 % Function that generates and plots action potentials using the Hodgkin-Huxley model
 
 clear all
-close all
+%close all
 
 % Initialize channel constants
 % All these also can be varied
@@ -32,7 +32,7 @@ templates.initial_ap = 30;
 [templates.end_time, templates.end_index, templates.transition] = gen_trans(tInit, xInit, const, duration, sampling_rate, templates);
 
 % Input function
-Iapp = @(t) 10*exp(-((t - templates.initial_ap)*2).^2);
+Iapp = @(t) 10*exp(-((t - templates.initial_ap)*2).^2) + 10*exp(-((t - 50)*2).^2);
 
 % Runs ODE
 [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
@@ -50,7 +50,7 @@ templates = adj_templates(templates);
 plot_simulation(t, x, duration, Iapp, templates);
 
 % Save the templates struct as a .mat file
-save_templates(templates);
+%save_templates(templates);
 
 %% Interpolate data function
 
@@ -115,9 +115,9 @@ for i = templates.abs_refract_time + templates.initial_ap:1/sampling_rate * 1000
     % Checks if the last 3 templates (in intervals of 5) have the same max 
     % value. If they do then it breaks out of loop and records value to adjust templates
     if (i > templates.abs_refract_time + templates.initial_ap + 3) ...
-            && (max(trans_temp{:, count}) == max(trans_temp{:, count - 5})) ...
-            && (max(trans_temp{:, count}) == max(trans_temp{:, count - 10})) ...
-            && (max(trans_temp{:, count}) == max(trans_temp{:, count - 15}))
+            && ((max(trans_temp{:, count}) <= max(trans_temp{:, count - 5}) + 0.05) && (max(trans_temp{:, count}) >= max(trans_temp{:, count - 5}) - 0.05)) ...
+            && ((max(trans_temp{:, count}) <= max(trans_temp{:, count - 10}) + 0.05) && (max(trans_temp{:, count}) >= max(trans_temp{:, count - 10}) - 0.05))...
+            && ((max(trans_temp{:, count}) <= max(trans_temp{:, count - 15}) + 0.05) && (max(trans_temp{:, count}) >= max(trans_temp{:, count - 15}) - 0.05))
         trans_temp = {trans_temp{:, 1:count - 15}};
         end_time = i - 3;   % End time is absolute time (includes initial_ap time)
         end_index = find(int_t == i) - 15;  % Relative to INTERPOLATED index (includes initial_ap)
