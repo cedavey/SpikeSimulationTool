@@ -23,7 +23,7 @@ for i = 1 : length(transition_cells)
     % Interpolates 3 or more transitioning spikes since there is no
     % premade template for them
     if length(transition_cells{i}) >= 3
-        for n = length(transition_cells{i}(3 : end)) + 2 % Iterate from 3rd transitioning spike onwards
+        for n = 3 : (length(transition_cells{i}(3 : end)) + 2) % Iterate from 3rd transitioning spike onwards
             
             t_between_trans_sp = transition_cells{i}(n) - transition_cells{i}(n-1); % Time between the spikes
             transition_idx = t_between_trans_sp - abs_refrac; % Minus abs_refrace to get the idx of the trans template being used
