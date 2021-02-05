@@ -48,7 +48,7 @@ try w = waitbar(7/8, w); catch, delete(w); error('Manually stopped'); end
 templates = adj_templates(templates);
 
 % Insert the sampling rate
-templates.fs = parameters.fs;
+templates.sampling_rate = parameters.sampling_rate;
 
 try w = waitbar(8/8, w); catch, delete(w); error('Manually stopped'); end
 
@@ -62,7 +62,7 @@ end
 % This function will interpolate the data to the correct sampling rate
 function [int_t, int_d] = interpolate(t, d, duration, parameters)
 
-int_t = 0 : 1/parameters.fs*1000 : duration;
+int_t = 0 : 1/parameters.sampling_rate*1000 : duration;
 int_d = interp1(t, d, int_t, 'spline');
 
 end
