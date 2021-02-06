@@ -60,7 +60,7 @@ for i = 1 : length(transition_cells)
             
             d = v_transition([t1, t2, t3, t4]); % Extract end bits where interpolation will join the ends
                         
-            v_transition(t1:t4) = interp1(t, d, t1:t4, 'spline'); % Replace with the smoothened (interpolated) version
+            v_transition(t1:t4) = interp1(t, d, t1:t4, 'makima'); % Replace with the smoothened (interpolated) version
             
         end
     end
