@@ -12,7 +12,7 @@ close all
 const.vRest = -65;               % This can be varied later on
 const.eNa   = 115 + const.vRest; % [mV]
 const.gNa   = 120;
-const.eK    = -12 + const.vRest; % [mV]
+const.eK    = -11 + const.vRest; % [mV]
 const.gK    = 36;
 const.eLeak = 10.6 + const.vRest;% [mV]
 const.gLeak = 0.3;
@@ -21,9 +21,13 @@ const.C     = 1.0;               % Capacitance of membrane
 duration = 200; % [msec]
 tInit    = [0 duration];
 xInit    = [-65; 0.052; 0.059; 0.317];
-templates.sampling_rate = 5000;
+templates.sampling_rate = 12000;
 templates.initial_ap = 30;
 templates.initial_ap_index = find(0:1/templates.sampling_rate*1000:duration >= templates.initial_ap, 1, 'first');
+
+% Store parameters for future reference
+
+templates.parametersUsed = store(const, templates);
 
 % Calculate the refractory period
 [templates.abs_refract_time, templates.abs_refract_index, templates.rel_refract_time, templates.rel_refract_index] = refract_period(tInit, xInit, const, duration, templates);
@@ -69,11 +73,11 @@ function [refract_time, refract_index, rel_refract_time, rel_refract_index] = re
 
 max_sampling_rate = 100000; % Aribitrary number right now
 refract = 0;
-i = templates.initial_ap; % 1+ to the initial_ap that was defined
+i = templates.initial_ap + 1; % 1+ to the initial_ap that was defined
 
 % Will loop until refract variable becomes true
 while refract == 0
-    i = i + 1/max_sampling_rate*1000 % This time should be 1/sampling_rate
+    i = i + 1/max_sampling_rate*1000; % This time should be 1/sampling_rate
     Iapp = @(t) 10 * exp(-((t - templates.initial_ap) * 2).^2) + 10 * exp(-((t - i) * 2).^2);
     [~, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, const);
 %     [int_t, int_d] = interpolate(t, x(:,1), duration, templates.sampling_rate);
@@ -87,7 +91,7 @@ while refract == 0
         refract_index = find(0:1/templates.sampling_rate*1000:duration >= i - templates.initial_ap, 1, 'first');  % This refractory time is the time between the TWO INPUT SPIKES. AT this time is when the first following spike can occur
         refract_time = 1/templates.sampling_rate*1000 * (refract_index - 1);   % This refractory index is the values within the time matrix between the TWO INPUT SPIKES
     end
-    if i > duration
+    if i > 60
         error('Unable to find refractory time due to lack of second spike');
         refract_time = NaN;
         refract_index = NaN;
@@ -108,13 +112,13 @@ for i = max_sr_refract_time + templates.initial_ap:1/max_sampling_rate * 1000:du
     rel_d = {d - d(1)};
     rel_temp = [rel_temp rel_d];
     
-    if (i > max_sr_refract_time + templates.initial_ap + 7)...
+    if (i > max_sr_refract_time + templates.initial_ap + 6)...
             && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - max_sampling_rate/1000}) - buffer))...
             && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 2}) - buffer))...
             && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 3}) - buffer))...
             && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 4}) - buffer))...
-            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 5}) - buffer))...
-            %&& ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 6}) - buffer))...
+            && ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 5}) - buffer))
+            %&& ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 6}) - buffer))
             %&& ((max(rel_temp{:, count}) <= max(rel_temp{:, count - max_sampling_rate/1000}) + buffer) && (max(rel_temp{:, count}) >= max(rel_temp{:, count - (max_sampling_rate/1000) * 7}) - buffer))
         rel_refract_index = find(0:1/templates.sampling_rate * 1000:duration >= (i - 5 - templates.initial_ap), 1, 'first');   % Takes first value that is larger than the one found with max_sampling_rate. This value is FROM initial spike at index = 151
         rel_refract_time = 1/templates.sampling_rate * 1000 * (rel_refract_index - 1);    % This value is FROM the initial spike at t = 30
@@ -207,6 +211,21 @@ for i = 1:size(templates.transition,2)
     temp = temp./max_val;
     templates.transition{i} = temp;
 end
+end
+
+%% Store the parameters
+
+function parametersUsed = store(const, templates)
+
+parametersUsed = {};
+
+parametersUsed{1} = {['Sampling rate = ' num2str(templates.sampling_rate)]};
+parametersUsed{2} = {['eNa = ' num2str(const.eNa - const.vRest)] ['gNa = ' num2str(const.gNa)]};
+parametersUsed{3} = {['eK = ' num2str(const.eK - const.vRest)] ['gK = ' num2str(const.gK)]};
+parametersUsed{4} = {['eLeak = ' num2str(const.eLeak - const.vRest)] ['gLeak = ' num2str(const.gLeak)]};
+parametersUsed{5} = {['C = ' num2str(const.C)]};
+parametersUsed{6} = {['vRest = ' num2str(const.vRest)]};
+
 end
 
 %% Plot function
