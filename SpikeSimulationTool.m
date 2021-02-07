@@ -24,10 +24,10 @@
 
 function vsim = SpikeSimulationTool(varargin)
 %% Options
-Naxons      = 5;                    % Number of different templates
+Naxons      = 1;                    % Number of different templates
 SNR         = 20;                   % Initial signal to noise ratio (it will change with drift)
 growth      = [(1.1 + (2 - 1.1) * rand) (0.8 + (1.2 - 0.8) * rand)]; % [1.9 1.1];   % Growth of: [<spamp> <noise>]
-total_time  = 2000;                 % Seconds
+total_time  = 20;                 % Seconds
 fs          = 5000;                 % Sampling rate (current template file has this sampling rate, so it should stay like this unless the templates are fixed)
 sr          = randi(10,1,Naxons)/2; % Spike rate
 overlap     = false;                % If true, it allows spikes of diff axons to overlap
@@ -40,6 +40,8 @@ pre_noise   = true;                 % Append period of just noise at the start
 do_filter   = true;                 % Bandpass filter the signal
 passband    = [40 1200];%[80, 600]; % Passband
 PLOT        = false;
+templates   = [];                   % Initialize templates
+templates_fn= 'templates_test_struct.mat'; % Default templates file
 
 if nargin >= 1
    data       = varargin{1};
@@ -58,6 +60,7 @@ if nargin >= 1
    do_filter  = data.do_filter;
    passband   = data.passband;
    PLOT       = data.PLOT;
+   templates_fn= data.templates_fn;
    
    swtch      = varargin{2};    % Pass in swtch struct for evnts parameters
    events     = varargin{3};    % Pass in events struct for evnts parameters
@@ -81,27 +84,29 @@ evnts.prob_start           = floor(0 + ((Naxons/2 - 0) * rand)); % (Recruited) N
 evnts.prob_end             = floor(0 + ((Naxons/2 - 0) * rand)); % (Dismissed) Number of axons that don't last the whole recording. They will randomly end somewhere along the recording.
 
 % If there is change in event value, input values
-for fn = fieldnames(events)'
-    if swtch.(fn{1}) == 1
-        evnts.(fn{1}) = events.(fn{1});
+if nargin >=1
+    for fn = fieldnames(events)'
+        if swtch.(fn{1}) == 1
+            evnts.(fn{1}) = events.(fn{1});
+        end
     end
 end
 
 %% Run
 % Load the templates matrix
-load(['.' filesep 'templates' filesep 'templates_test']);
 
-% Normalize templates amplitude, max peak = 1
-for i =1:size(d,2)
-   dd = d(:,i);
-   max_d = max(d);
-   dd = dd./max_d(i);
-   d(:,i) = dd;
+if isempty(data.templates)
+    % Find the directory path to templates folder
+    [path,~,~] = fileparts(mfilename('fullpath'));
+    load([path filesep 'templates' filesep templates_fn]);
+else
+    templates = data.templates; % Loads generated template from templatesApp.mlapp
 end
+
 
 dt = 1/fs;
 try % Generate a train of extracellular spikes. There is no noise
-   [v, vv, report] = gen_train(d, Naxons, fs, total_time/dt,       ...
+   [v, vv, report] = gen_train(templates, Naxons, fs, total_time/dt,       ...
                                'SpikeRate',       sr,              ...
                                'Overlap',         overlap,         ...
                                'Recruited',       evnts.prob_start,...
@@ -195,14 +200,14 @@ if PLOT
    naxons = size(vsim.axons, 2);
    % Plot templates
    figure;
-   for i = 1:naxons
+   for temp = 1:naxons
       nr = ceil(sqrt(naxons));
       nc = ceil(naxons/3);
       if naxons == 3
          nc = 1; nr = 3;
       end
-      subplot(nc, nr, i);
-      plot(vv( max(vsim.report.locs{i}(1) - 100, 1) : min(vsim.report.locs{i}(1) + 100, size(vv,1)), i));
+      subplot(nc, nr, temp);
+      plot(vv( max(vsim.report.locs{temp}(1) - 100, 1) : min(vsim.report.locs{temp}(1) + 100, size(vv,1)), temp));
    end
    clear vv
 end
