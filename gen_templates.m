@@ -11,7 +11,7 @@ templates.initial_ap_index = find(0:1/parameters.sampling_rate*1000:duration >= 
 w = waitbar(0, 'Generating templates...');
 
 % Store parameters into the templates struct for reference
-templates.parametersUsed = store(parameters);
+templates.parametersUsed = parameters;
 
 % Calculate the refractory period
 [templates.abs_refract_time, templates.abs_refract_index, templates.rel_refract_time, templates.rel_refract_index] = refract_period(tInit, xInit, duration, templates, parameters, w);
@@ -212,17 +212,4 @@ for i = 1:size(templates.transition,2)
     temp = temp./max_val;
     templates.transition{i} = temp;
 end
-end
-
-%% Store the parameters
-
-function parametersUsed = store(parameters)
-
-parametersUsed{1} = {['Sampling rate = ' num2str(parameters.sampling_rate)]};
-parametersUsed{2} = {['eNa = ' num2str(parameters.eNa - parameters.vRest)] ['gNa = ' num2str(parameters.gNa)]};
-parametersUsed{3} = {['eK = ' num2str(parameters.eK - parameters.vRest)] ['gK = ' num2str(parameters.gK)]};
-parametersUsed{4} = {['eLeak = ' num2str(parameters.eLeak - parameters.vRest)] ['gLeak = ' num2str(parameters.gLeak)]};
-parametersUsed{5} = {['C = ' num2str(parameters.C)]};
-parametersUsed{6} = {['vRest = ' num2str(parameters.vRest)]};
-
 end
