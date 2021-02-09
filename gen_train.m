@@ -100,6 +100,9 @@ function [v, vv, report] = gen_train(templates, Naxons, fs, duration, varargin)
    % Run the simulation
    [vv, rr] = run_simulation(Naxons, templates, fs, duration ,opts ,amplitudes, st_time, end_time);
    
+   % Convert from intracellular to extracellular simulations
+   vv = diff(vv)/fs;
+   
    % Sum all axons
    v = sum(vv,2);
    
