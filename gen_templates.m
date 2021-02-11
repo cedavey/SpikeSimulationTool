@@ -42,16 +42,17 @@ try w = waitbar(6/8, w); catch, delete(w); error('Manually stopped'); end
 % Generate single spike template
 [templates.t, templates.d] = gen_template(interp_t, interp_d, 1, templates);
 % Change to column vector and normalize to 0 and normalize max
-templates.d = (templates.d + abs(templates.d(1)));
-templates.d = templates.d / max(templates.d);
+%templates.d = (templates.d + abs(templates.d(1)));
+%templates.d = templates.d / max(templates.d);
 
 try w = waitbar(7/8, w); catch, delete(w); error('Manually stopped'); end
 
 % Adjust the transition template lengths
 templates = adj_templates(templates);
 
-% Insert the sampling rate
-templates.sampling_rate = parameters.sampling_rate;
+% 1st derivative of all templates
+
+templates = intra2extra(templates, parameters);
 
 try w = waitbar(8/8, w); catch, delete(w); error('Manually stopped'); end
 
@@ -211,5 +212,19 @@ for i = 1:size(templates.transition,2)
     temp = templates.transition{i};
     temp = temp./max_val;
     templates.transition{i} = temp;
+end
+end
+
+%%
+
+function templates = intra2extra(templates, parameters)
+
+templates.d = -(diff(templates.d)./diff(templates.t));
+templates.d = templates.d./max(templates.d);
+templates.t = templates.t(1:end-1);
+
+for i = 1:size(templates.transition,2)
+    templates.transition{i} = -(diff(templates.transition{i})./(1/parameters.sampling_rate));
+    templates.transition{i} = templates.transition{i}./max(templates.transition{i});
 end
 end
