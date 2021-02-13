@@ -141,7 +141,7 @@ trans_temp = {};
 % Loops through the entirety of the duration if required in steps of 0.2ms
 for i = templates.abs_refract_time + templates.initial_ap:1/parameters.sampling_rate * 1000:templates.rel_refract_time+templates.initial_ap
     
-    Iapp = @(t) 10 * exp(-((t - templates.initial_ap) * 2).^2) + 10 * exp(-((t - i)*2).^2);
+    Iapp = @(t) 10 * exp(-((t - 30) * 2).^2) + 10 * exp(-((t - i)*2).^2);
     [t, x] = ode45('gen_templates_HHode', tInit, xInit, [], Iapp, parameters);
     [int_t, int_d] = interpolate(t, x(:,1), duration, parameters);
     [~, temp_d] = gen_template(int_t, int_d, 2, templates);
@@ -219,12 +219,12 @@ end
 
 function templates = intra2extra(templates, parameters)
 
-templates.d = -(diff(templates.d)./diff(templates.t));
-templates.d = templates.d./max(templates.d);
+templates.d = (diff(templates.d)./diff(templates.t));
+templates.d = -templates.d./min(templates.d);
 templates.t = templates.t(1:end-1);
 
 for i = 1:size(templates.transition,2)
-    templates.transition{i} = -(diff(templates.transition{i})./(1/parameters.sampling_rate));
-    templates.transition{i} = templates.transition{i}./max(templates.transition{i});
+    templates.transition{i} = (diff(templates.transition{i})./(1/parameters.sampling_rate));
+    templates.transition{i} = -templates.transition{i}./min(templates.transition{i});
 end
 end
