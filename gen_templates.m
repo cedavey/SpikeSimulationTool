@@ -215,8 +215,7 @@ for i = 1:size(templates.transition,2)
 end
 end
 
-%%
-
+%% Convert intracellular to extracellular signals
 function templates = intra2extra(templates, parameters)
 
 templates.d = (diff(templates.d)./diff(templates.t));
