@@ -104,9 +104,9 @@ function v = add_drift(v_in, varargin)
       end
    end
    
-   if opts.Noise
+   if opts.Noise 
       % Calculate the variance of the signal
-      [a, b] = findpeaks( v_in, 'MinPeakHeight', 0.01, 'MinPeakWidth', 3);
+      [a, b] = findpeaks( v_in, 'MinPeakHeight', 0.01, 'MinPeakProminence', 0.05); %MinPeakProminence may need to be adjusted based on amplitude of spikes later
       rms_v = (sum(a.^2))/numel(a);
       % Change the variance of the noise to comply with the SNR
       % var_n = (rms_v^2)/opts.SNR;

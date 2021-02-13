@@ -219,12 +219,12 @@ end
 
 function templates = intra2extra(templates, parameters)
 
-templates.d = -(diff(templates.d)./diff(templates.t));
+templates.d = (diff(templates.d)./diff(templates.t)); %-(diff(templates.d)./diff(templates.t));
 templates.d = templates.d./max(templates.d);
 templates.t = templates.t(1:end-1);
 
 for i = 1:size(templates.transition,2)
-    templates.transition{i} = -(diff(templates.transition{i})./(1/parameters.sampling_rate));
+    templates.transition{i} = (diff(templates.transition{i})./(1/parameters.sampling_rate)); %-(diff(templates.transition{i})./(1/parameters.sampling_rate));
     templates.transition{i} = templates.transition{i}./max(templates.transition{i});
 end
 end
