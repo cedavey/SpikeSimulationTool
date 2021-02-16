@@ -238,12 +238,12 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       % Create a recording of zeroes
       v_non_transition = zeros(duration, 1);
       v_transition = zeros(duration, 1);
-      spks(:,i) = zeros(duration, 1);
+      spks(:,i) = zeros(duration, 1); % Used for reports and not template generation
       
       % Assign binary spikes to the vector, the amplitude of the spikes is
       % weighted, instead of being just 1 or 0.
       v_non_transition(non_transition) = amplitudes(i);
-      spks(sptimes,i) = 1;
+      spks(sptimes,i) = 1; % Used for reports and not template generation
       % Vary the amplitude
       rand_amp = 0.99 + (1.01 - 0.99) .* rand(size(non_transition)); % small variation in amplitude
       v_non_transition(non_transition) = v_non_transition(non_transition).*rand_amp;
