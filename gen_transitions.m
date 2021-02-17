@@ -50,15 +50,15 @@ for i = 1 : length(transition_cells)
             % ______         
             %  t1 t2 [interp]  t3 t4
             
-            t1 = st_trans_gr - 2;
-            t2 = st_trans_gr - 1;
+            t1 = st_trans_gr - 2; % 2 time steps before region of interpolation
+            t2 = st_trans_gr - 1; % 1 time step before region of interpolation
             
-            t3 = find(transition_template > v_transition(st_trans_gr-1), 1, 'first') + st_trans_gr; % The first point where the data at t3 is larger than t2
-            t4 = t3 + 1;
+            t3 = find(transition_template > v_transition(st_trans_gr-1), 1, 'first') + st_trans_gr; % 1 time step after region of interpolation where the data point at t2 is larger than the data point at t3
+            t4 = t3 + 1; % 2 time steps after region of interpolation
             
-            t = [t1; t2; t3; t4];
+            t = [t1; t2; t3; t4]; % Combine time steps into time matrix for interpolation
             
-            d = v_transition([t1, t2, t3, t4]); % Extract end bits where interpolation will join the ends
+            d = v_transition([t1, t2, t3, t4]); % Extract end bits (data points) where interpolation will join the ends
                         
             v_transition(t1:t4) = interp1(t, d, t1:t4, 'makima'); % Replace with the smoothened (interpolated) version
             
