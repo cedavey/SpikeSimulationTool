@@ -251,20 +251,21 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       % If the amplitude of current axon changes suddenly, scale all the
       % spikes after such time.
       % Ref: quirk2001, tsubokawa1996
+      log_amp = 0;
       if ~isempty(find(amped == i,1))
          end_amp = (0.5 * rand(1,1) - 0.25); % Change in amplitude limited to 0.15 and -0.15
-         log_amp = amplitudes(i) + (end_amp./(1 + exp(-10 * dt * ([1 : length(v_non_transition)] - amp_time)))); % logistic function
-         v_non_transition = v_non_transition .* log_amp';
-%          v_transition = v_transition .* log_amp'; NOT INTERGRATED  WITH
-%          TRANSITIONING SPIKES YET
+         log_amp =  (end_amp./(1 + exp(-10 * dt * ([1 : length(v_non_transition)] - amp_time)))); % logistic function
+         amp = 1 + log_amp';
+         v_non_transition = v_non_transition .* amp;
       end
       
       % Propagate the spike shape along the spikes vector
       v_non_transition = conv(v_non_transition,templates(currentTemplate).d);
       v_non_transition = v_non_transition(1 : duration, 1); % Remove trailing bits of convolution
-
-      if ~isempty(transition) % Only run gen_transitions if there are transitions
-          v_transition = amplitudes(i)*gen_transitions(transition_cells, templates(currentTemplate).transition, duration, templates(currentTemplate).abs_refract_index);
+      
+      % Only run gen_transitions if there are transitions
+      if ~isempty(transition)
+          v_transition = (amplitudes(i) + log_amp') .* gen_transitions(transition_cells, templates(currentTemplate).transition, duration, templates(currentTemplate).abs_refract_index);
       end
       
       % Assign the temporal variable v_ to the matrix of axons
