@@ -159,10 +159,10 @@ end
 if total_num_extracted_sp > total_num_simulated_sp; fprintf('<strong>WARNING:</strong> total number of extracted > total number of sim\n'); end
 
 match_accuracy = total_num_matched_sp / total_num_simulated_sp * 100;
-fprintf('<strong>%.1f%%</strong> of spikes were correctly identified and matched to the original simulation.\n', match_accuracy);
+fprintf('<strong>%.1f%%</strong> of extracted sp were identified and matched to the original simulation.\n', match_accuracy);
 
 incorrectly_identified_sp = (total_num_extracted_sp - total_num_matched_sp) / total_num_extracted_sp * 100;
-fprintf('<strong>%.1f%%</strong> of spikes were out of tolerance range / ignored(if overlap mode) based on the total extracted.\n', incorrectly_identified_sp);
+fprintf('<strong>%.1f%%</strong> of extracted spikes were out of tolerance range / ignored(if overlap mode) based on the total extracted.\n', incorrectly_identified_sp);
 
 % Prints a table which identifies the extracted spikes belonging to a
 % certain simulated axon
@@ -181,10 +181,11 @@ for naxon = 1:length(simulated_loc)
                     % certainty is the number of identified spikes in a family which actually belong to the simulated axon group (since the
                     % the associated axon is determined by the majority of spikes within  the family, some may be incorrectly assigned to the wrong naxon)
                     % certainty < 1.00 means that at least one of the sp in the family is matched to a different naxon
-                    certainty = sum(matched_loc{AP_num}{family_num, 1}(:,2) == naxon) / size(matched_loc{AP_num}{family_num}, 1);
+                    extraced_matched = sum(matched_loc{AP_num}{family_num, 1}(:,2) == naxon);
+                    certainty = extraced_matched / size(matched_loc{AP_num}{family_num}, 1);
                     % percent_of_naxon is the fraction of sp within the family over the total simulated sp in the naxon
                     % it is multiplied by certainty since not all sp within the family may come from the same naxon
-                    percent_of_naxon = (size(matched_loc{AP_num}{family_num, 1}, 1) / length(simulated_loc{naxon})) * certainty;
+                    percent_of_naxon = (extraced_matched / length(simulated_loc{naxon})) * certainty;
                     
                     % Print the row
                     fprintf(['  %d   |   %d         %d        %0.2f        %0.2f' newline], ...
