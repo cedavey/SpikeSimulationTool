@@ -14,10 +14,10 @@
 %   because the matching sp are like split 50-50 with another naxon and its
 %   just flipping to another naxon when more sp are picked up
 %
-% 3) OPTIONAL enable Allow Overlap mode which allows simulated sp which have 
-%    detected >1 extraced sp to only save the closest one while others are reported 
+% 3) OPTIONAL enable Allow Overlap mode (line 57) which allows simulated sp which have 
+%    detected >1 extraced sp to only save the closest one while the ignored ones are reported 
 %    in the command line. Try not to do it when you first run and only as a
-%    last resort when tolerance doesnt work
+%    last resort when you see that the extracted sp are too close together
 %
 % 4) Run script
 %
@@ -46,7 +46,7 @@ extrac_data = extrac_data.(fieldname{1});
 % The extracted sp must be between the positive and negative tolerance
 % values of ONE simulated sp for it to be considered match
 % Can be adjusted smaller to be more sensitive
-pos_tolerance = 90; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
+pos_tolerance = 70; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
 neg_tolerance = 0; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
 fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_tolerance);
 
@@ -168,9 +168,10 @@ fprintf('<strong>%.1f%%</strong> of extracted spikes were out of tolerance range
 % certain simulated axon
 row_border = '-----------------------------------------------\n';
 fprintf([' SIM  |               EXTRAC'                       newline ...
-         'Naxon |  AP      Family    Certainty    %%naxon'    newline ...
+         'Naxon |  AP      Family    %%family    %%naxon'    newline ...
                               row_border                              ...
          ]);
+row = 1;
 for naxon = 1:length(simulated_loc)
     family_matched_axon_flag = 0; % Set a marker/flag which indicates whether the naxon succesfully matched a family
     
@@ -178,24 +179,30 @@ for naxon = 1:length(simulated_loc)
         for family_num = 1:size(matched_loc{AP_num}, 1)
             for associated_axon = matched_loc{AP_num}{family_num, 2}
                 if naxon == associated_axon
-                    % certainty is the number of identified spikes in a family which actually belong to the simulated axon group (since the
-                    % the associated axon is determined by the majority of spikes within  the family, some may be incorrectly assigned to the wrong naxon)
-                    % certainty < 1.00 means that at least one of the sp in the family is matched to a different naxon
-                    extraced_matched = sum(matched_loc{AP_num}{family_num, 1}(:,2) == naxon);
-                    certainty = extraced_matched / size(matched_loc{AP_num}{family_num}, 1);
-                    % percent_of_naxon is the fraction of sp within the family over the total simulated sp in the naxon
-                    % it is multiplied by certainty since not all sp within the family may come from the same naxon
-                    percent_of_naxon = (extraced_matched / length(simulated_loc{naxon})) * certainty;
+                    % num of xtracted sp in the family matched to the same naxon
+                    extracted_matched = sum(matched_loc{AP_num}{family_num, 1}(:,2) == naxon);
+                    % extracted_matched / num of sp in family
+                    percent_family = extracted_matched / size(matched_loc{AP_num}{family_num}, 1);
+                    % extracted_matched / num of sp in sim naxon
+                    percent_naxon = extracted_matched / length(simulated_loc{naxon});
+                    
+                    % Record into table variable
+                    table(row, 1) = naxon;
+                    table(row, 2) = AP_num;
+                    table(row, 3) = family_num;
+                    table(row, 4) = percent_family;
+                    table(row, 5) = percent_naxon;
+                    row = row + 1;
                     
                     % Print the row
                     fprintf(['  %d   |   %d         %d        %0.2f        %0.2f' newline], ...
                              naxon,           ...
                              AP_num,          ...
                              family_num,      ...
-                             certainty,       ...
-                             percent_of_naxon ...
+                             percent_family,  ...
+                             percent_naxon    ...
                              );
-                    
+                         
                     family_matched_axon_flag = 1; % Set a marker that a family was found to match the naxon
                 end
             end %if naxon == matched_loc{AP_num}{family_num, 2}
