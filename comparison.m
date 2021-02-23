@@ -33,7 +33,7 @@ clear
 % (AUTO)Open simulated and extracted file automatically (Change file directories when needed)
 file_sim    = 'sim_C&D4.mat';%'sim_artemio8.mat';%'simulated1.mat';
 path_sim    = 'C:\Users\chris\Desktop\sim test';
-file_extrac = 'data_C&D4.mat';%'data_Art8.mat';%'extracted1.mat';
+file_extrac = 'data_C&D4_v2.mat';%'data_Art8.mat';%'extracted1.mat';
 path_extrac = 'C:\Users\chris\Desktop\sim data';
 sim_data = load(fullfile(path_sim, file_sim));
 fieldname = fieldnames(sim_data);
@@ -170,10 +170,10 @@ end
 if total_num_extracted_sp > total_num_simulated_sp; fprintf('<strong>WARNING:</strong> total number of extracted > total number of sim\n'); end
 
 match_accuracy = total_num_matched_sp / total_num_simulated_sp * 100;
-fprintf('<strong>%.1f%%</strong> of extracted sp were identified and matched to the original simulation.\n', match_accuracy);
+fprintf('<strong>%.1f%%</strong> total matched sp / total simulated sp.\n', match_accuracy);
 
-incorrectly_identified_sp = (total_num_extracted_sp - total_num_matched_sp) / total_num_extracted_sp * 100;
-fprintf('<strong>%.1f%%</strong> of extracted spikes were out of tolerance range / ignored(if overlap mode) based on the total extracted.\n', incorrectly_identified_sp);
+incorrectly_identified_sp = total_num_matched_sp / total_num_extracted_sp * 100;
+fprintf('<strong>%.1f%%</strong> total matched sp / total extracted sp.\n', incorrectly_identified_sp);
 
 % Prints a table which identifies the extracted spikes belonging to a
 % certain simulated axon
