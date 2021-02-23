@@ -31,9 +31,9 @@ clear
 %[sim_data, extrac_data] = open_sim_fileUI;
 
 % (AUTO)Open simulated and extracted file automatically (Change file directories when needed)
-file_sim    = 'sim_artemio8.mat';%'sim_C&D4.mat';%'simulated1.mat';
+file_sim    = 'sim_C&D4.mat';%'sim_artemio8.mat';%'simulated1.mat';
 path_sim    = 'C:\Users\chris\Desktop\sim test';
-file_extrac = 'data_Art8.mat';%'data_C&D4.mat';%'extracted1.mat';
+file_extrac = 'data_C&D4.mat';%'data_Art8.mat';%'extracted1.mat';
 path_extrac = 'C:\Users\chris\Desktop\sim data';
 sim_data = load(fullfile(path_sim, file_sim));
 fieldname = fieldnames(sim_data);
@@ -46,15 +46,15 @@ extrac_data = extrac_data.(fieldname{1});
 % The extracted sp must be between the positive and negative tolerance
 % values of ONE simulated sp for it to be considered match
 % Can be adjusted smaller to be more sensitive
-pos_tolerance = 50; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
-neg_tolerance = 10; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
+pos_tolerance = 100; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
+neg_tolerance = 0; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
 fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_tolerance);
 
 %% CHANGE OVERLAP MODE HERE
 % This will allow simulated sp which have detected >1 extraced sp to save the
 % closest one while others are reported in the command line. ONLY USE IF
 % TOLERANCE CAN'T BE TUNED BETTER
-allow_overlap = 0; % 0=disabled   1=enabled
+allow_overlap = 1; % 0=disabled   1=enabled
 if allow_overlap == 1; fprintf('<strong>OVERLAP MODE ENABLED</strong> simulated sp with >1 matching extracted sp will be allowed and reported\n'); end
 
 %% Set variables
@@ -94,7 +94,7 @@ for AP_num = 1:length(extracted_loc)
                     for ignore = ignored_overlap_sp
                         ignored_str = [ignored_str sprintf('extracted_loc{%d}{%d}(%d), ', AP_num, family_num, ignore)];
                     end
-                    fprintf(['<strong>Overlap ignored sim naxon %d: </strong>' ignored_str newline], sim_axon_num);
+                    fprintf(['<strong>OVERLAP MODE ignored: </strong>' ignored_str newline]);
                 end
                    
                 
