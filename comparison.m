@@ -31,9 +31,9 @@ clear
 %[sim_data, extrac_data] = open_sim_fileUI;
 
 % (AUTO)Open simulated and extracted file automatically (Change file directories when needed)
-file_sim    = 'sim_C&D4.mat';%'simulated1.mat';%'sim_artemio8.mat';
+file_sim    = 'sim_artemio8.mat';%'sim_C&D4.mat';%'simulated1.mat';
 path_sim    = 'C:\Users\chris\Desktop\sim test';
-file_extrac = 'data_C&D4.mat';%'extracted1.mat'; %'data_Art8.mat';
+file_extrac = 'data_Art8.mat';%'data_C&D4.mat';%'extracted1.mat';
 path_extrac = 'C:\Users\chris\Desktop\sim data';
 sim_data = load(fullfile(path_sim, file_sim));
 fieldname = fieldnames(sim_data);
@@ -46,15 +46,15 @@ extrac_data = extrac_data.(fieldname{1});
 % The extracted sp must be between the positive and negative tolerance
 % values of ONE simulated sp for it to be considered match
 % Can be adjusted smaller to be more sensitive
-pos_tolerance = 70; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
-neg_tolerance = 0; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
+pos_tolerance = 50; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
+neg_tolerance = 10; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
 fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_tolerance);
 
 %% CHANGE OVERLAP MODE HERE
 % This will allow simulated sp which have detected >1 extraced sp to save the
 % closest one while others are reported in the command line. ONLY USE IF
 % TOLERANCE CAN'T BE TUNED BETTER
-allow_overlap = 1; % 0=disabled   1=enabled
+allow_overlap = 0; % 0=disabled   1=enabled
 if allow_overlap == 1; fprintf('<strong>OVERLAP MODE ENABLED</strong> simulated sp with >1 matching extracted sp will be allowed and reported\n'); end
 
 %% Set variables
@@ -97,22 +97,33 @@ for AP_num = 1:length(extracted_loc)
                     fprintf(['<strong>Overlap ignored sim naxon %d: </strong>' ignored_str newline], sim_axon_num);
                 end
                    
-                % Records which simulated when there is a match
+                
                 if ~isempty(extracted_loc{AP_num}{family_num}(idx))
                     try
+                        % Checks if it the extracted sp was assigned to
+                        % more than one sim sp (this doenst break the code
+                        % but might mess up statistics)
+                        if ~isempty(matched_loc_temp) && ismember(extracted_loc{AP_num}{family_num}(idx), matched_loc_temp(:,1))
+                            fprintf('<strong>WARNING: </strong> extracted_loc{%d}{%d}(%d) assinged to >1 sim naxon. Try decreasing tolerance.\n', AP_num, family_num, find(idx==1));
+                        end
+                        
+                        % Records which simulated when there is a match into a
+                        % temporary variable which is grouped after the for loop
                         matched_loc_temp(end+1,1) = extracted_loc{AP_num}{family_num}(idx);
                         matched_loc_temp(end,2) = sim_axon_num; % Records which simulated naxon it belongs to
-                    catch
+                        
+                    catch E
                         if sum(idx) > 1
                             error('A sim sp has detected >1 matching extracted sp within tolerance. @ extracted_loc{%d}{%d}(%d). Try decreasing tolerance or enable OVERLAP MODE', AP_num, family_num, find(idx==1, 1, 'first'));
                         else
-                            error('I dun know whats wrong ¯\_( ͡ಥ ͜ʖ ͡ಥ)_/¯');
+                            rethrow(E)
                         end
                     end
                 end
             end
             if ~isempty(matched_loc_temp)
                 % Records the extracted sp that match with a simulated sp
+                % into a larger group variable
                 matched_loc{AP_num}{family_num, 1} = matched_loc_temp;
                 matched_loc{AP_num}{family_num, 2} = unique(matched_loc_temp(:,2))'; % Records which simulated axon the family most likely belongs based on the the majority within the family
                 
@@ -168,7 +179,7 @@ fprintf('<strong>%.1f%%</strong> of extracted spikes were out of tolerance range
 % certain simulated axon
 row_border = '-----------------------------------------------\n';
 fprintf([' SIM  |               EXTRAC'                       newline ...
-         'Naxon |  AP      Family    %%family    %%naxon'    newline ...
+         'Naxon |  AP      Family    %%family      %%naxon'    newline ...
                               row_border                              ...
          ]);
 row = 1;
