@@ -180,12 +180,12 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
      
       
       currentTemplate = templates_(i); % Randomly pick 1 of the templates to assign to this axon.
-      duration_of_spike = templates(currentTemplate).abs_refract_index + length(templates(currentTemplate).transition); % Duration(idx) until first spike no longer transitions
+      duration_of_spike = templates(currentTemplate).refract_index + length(templates(currentTemplate).transition); % Duration(idx) until first spike no longer transitions
       isi = random('Exponential', fs/opts.SpikeRate(i), [3*max_spike_num 1]);
       isi = round(isi);
       % Remove isi that are closer than the duration of a spike or
       % refractory period
-      isi(isi <= templates(currentTemplate).abs_refract_index) = []; % isi(isi < (size(templates,1) + rest)) = ceil(size(templates,1) + rest);
+      isi(isi <= templates(currentTemplate).refract_index) = []; % isi(isi < (size(templates,1) + rest)) = ceil(size(templates,1) + rest);
       
       
       % If it doesn't get affected by inflammation, it's firing rate
@@ -265,7 +265,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
       
       % Only run gen_transitions if there are transitions
       if ~isempty(transition)
-          v_transition = (amplitudes(i) + log_amp') .* gen_transitions(transition_cells, templates(currentTemplate).transition, duration, templates(currentTemplate).abs_refract_index);
+          v_transition = (amplitudes(i) + log_amp') .* gen_transitions(transition_cells, templates(currentTemplate).transition, duration, templates(currentTemplate).refract_index);
       end
       
       % Assign the temporal variable v_ to the matrix of axons

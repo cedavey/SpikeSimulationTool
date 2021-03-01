@@ -31,9 +31,9 @@ clear
 %[sim_data, extrac_data] = open_sim_fileUI;
 
 % (AUTO)Open simulated and extracted file automatically (Change file directories when needed)
-file_sim    = 'sim_C&D4.mat';%'sim_artemio8.mat';%'simulated1.mat';
+file_sim    = 'sim3.mat';%'sim_artemio8.mat';%'simulated1.mat';
 path_sim    = 'C:\Users\chris\Desktop\sim test';
-file_extrac = 'data_C&D4_v2.mat';%'data_Art8.mat';%'extracted1.mat';
+file_extrac = 'extrac3.mat';%'data_Art8.mat';%'extracted1.mat';
 path_extrac = 'C:\Users\chris\Desktop\sim data';
 sim_data = load(fullfile(path_sim, file_sim));
 fieldname = fieldnames(sim_data);
@@ -46,15 +46,15 @@ extrac_data = extrac_data.(fieldname{1});
 % The extracted sp must be between the positive and negative tolerance
 % values of ONE simulated sp for it to be considered match
 % Can be adjusted smaller to be more sensitive
-pos_tolerance = 100; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
-neg_tolerance = 0; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
+pos_tolerance = 30; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
+neg_tolerance = 10; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
 fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_tolerance);
 
 %% CHANGE OVERLAP MODE HERE
 % This will allow simulated sp which have detected >1 extraced sp to save the
 % closest one while others are reported in the command line. ONLY USE IF
 % TOLERANCE CAN'T BE TUNED BETTER
-allow_overlap = 1; % 0=disabled   1=enabled
+allow_overlap = 0; % 0=disabled   1=enabled
 if allow_overlap == 1; fprintf('<strong>OVERLAP MODE ENABLED</strong> simulated sp with >1 matching extracted sp will be allowed and reported\n'); end
 
 %% Set variables
@@ -141,7 +141,7 @@ try
     plot_sp_loc(simulated_loc, matched_loc, end_loc);
     title('EXTRACTED SPIKES THAT MATCH A SIM SPIKE');
 catch
-    error('No matching spikes found (╯°□°）╯︵ ┻━┻. Try increasing the tolerance variable to increase detection range');
+    error('No matching spikes found (╯°□°）╯. Try increasing the tolerance variable to increase detection range');
 end
 
 
@@ -170,10 +170,10 @@ end
 if total_num_extracted_sp > total_num_simulated_sp; fprintf('<strong>WARNING:</strong> total number of extracted > total number of sim\n'); end
 
 match_accuracy = total_num_matched_sp / total_num_simulated_sp * 100;
-fprintf('<strong>%.1f%%</strong> total matched sp / total simulated sp.\n', match_accuracy);
+fprintf('<strong>%.1f%%</strong> (%d/%d) total matched sp / total simulated sp.\n', match_accuracy, total_num_matched_sp, total_num_simulated_sp);
 
 incorrectly_identified_sp = total_num_matched_sp / total_num_extracted_sp * 100;
-fprintf('<strong>%.1f%%</strong> total matched sp / total extracted sp.\n', incorrectly_identified_sp);
+fprintf('<strong>%.1f%%</strong> (%d/%d) total matched sp / total extracted sp.\n', incorrectly_identified_sp, total_num_matched_sp, total_num_extracted_sp);
 
 % Prints a table which identifies the extracted spikes belonging to a
 % certain simulated axon
@@ -261,19 +261,25 @@ plot([0 end_loc], [0.6 0.6], 'g');
 end
 
 function [sim_data, extrac_data]= open_sim_fileUI
-% Open using simulation
-[file, path] = uigetfile('*.mat', 'Select simulation');
-fullName = fullfile(path, file);
-sim_data = load(fullName);
-fieldname = fieldnames(sim_data);
-sim_data = sim_data.(fieldname{1});
 
-% Open extracted spikes
-[file, path] = uigetfile('*.mat', 'Select extracted spikes');
-fullName = fullfile(path, file);
-extrac_data = load(fullName);
-fieldname = fieldnames(extrac_data);
-extrac_data = extrac_data.(fieldname{1});
+try
+    % Open using simulation
+    [file, path] = uigetfile('*.mat', 'Select simulation');
+    fullName = fullfile(path, file);
+    sim_data = load(fullName);
+    fieldname = fieldnames(sim_data);
+    sim_data = sim_data.(fieldname{1});
+    
+    % Open extracted spikes
+    [file, path] = uigetfile('*.mat', 'Select extracted spikes');
+    fullName = fullfile(path, file);
+    extrac_data = load(fullName);
+    fieldname = fieldnames(extrac_data);
+    extrac_data = extrac_data.(fieldname{1});
+
+catch
+    error('Manually closed. User did not select file.');
+end
 
 end
 
