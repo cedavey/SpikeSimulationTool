@@ -4,7 +4,7 @@
 % 1) Choose either manual or automatic loading of files by commenting out
 %    the unused one (line 19-33)
 %
-% 2) Adjust the positive and negative tolerance to suit your data(line 39-40). 
+% 2) Adjust the positive and negative tolerance to suit your data(line 30-31). 
 %   -If unsure, run the script once first and the code will tell you whether 
 %     to increase/decrease if you were wrong
 %   - OR run script and manually check the plots for the optimal tolerance
@@ -14,7 +14,7 @@
 %   because the matching sp are like split 50-50 with another naxon and its
 %   just flipping to another naxon when more sp are picked up
 %
-% 3) OPTIONAL enable Allow Overlap mode (line 57) which allows simulated sp which have 
+% 3) OPTIONAL enable Allow Overlap mode (line 38) which allows simulated sp which have 
 %    detected >1 extraced sp to only save the closest one while the ignored ones are reported 
 %    in the command line. Try not to do it when you first run and only as a
 %    last resort when you see that the extracted sp are too close together
@@ -22,32 +22,16 @@
 % 4) Run script
 %
 % 5) Pray everyting goes right
-%
 
 close all
 clear
-%% LOAD DATA (COMMENT OUT THE MANUAL OR AUTOMATIC SECTION AS NEEDED)
-% (MANUAL)Open simulated and extracted file manually using file UIs
-%[sim_data, extrac_data] = open_sim_fileUI;
-
-% (AUTO)Open simulated and extracted file automatically (Change file directories when needed)
-file_sim    = 'sim3.mat';%'sim_artemio8.mat';%'simulated1.mat';
-path_sim    = 'C:\Users\chris\Desktop\sim test';
-file_extrac = 'extrac3.mat';%'data_Art8.mat';%'extracted1.mat';
-path_extrac = 'C:\Users\chris\Desktop\sim data';
-sim_data = load(fullfile(path_sim, file_sim));
-fieldname = fieldnames(sim_data);
-sim_data = sim_data.(fieldname{1});
-extrac_data = load(fullfile(path_extrac, file_extrac));
-fieldname = fieldnames(extrac_data);
-extrac_data = extrac_data.(fieldname{1});
 
 %% ADJUST TOLERANCE HERE
 % The extracted sp must be between the positive and negative tolerance
 % values of ONE simulated sp for it to be considered match
 % Can be adjusted smaller to be more sensitive
-pos_tolerance = 30; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
-neg_tolerance = 10; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
+pos_tolerance = 40; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
+neg_tolerance = 40; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
 fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_tolerance);
 
 %% CHANGE OVERLAP MODE HERE
@@ -57,14 +41,32 @@ fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_toleranc
 allow_overlap = 0; % 0=disabled   1=enabled
 if allow_overlap == 1; fprintf('<strong>OVERLAP MODE ENABLED</strong> simulated sp with >1 matching extracted sp will be allowed and reported\n'); end
 
+%% LOAD DATA (COMMENT OUT THE MANUAL OR AUTOMATIC SECTION AS NEEDED)
+% (AUTO)Open simulated and extracted file automatically (Change file directories when needed)
+file_sim    = 'sim3.mat';%'sim_artemio8.mat';%'simulated1.mat';
+path_sim    = 'C:\Users\chris\Desktop\sim test';
+file_extrac = 'extrac3.mat';%'data_Art8.mat';%'extracted1.mat';
+path_extrac = 'C:\Users\chris\Desktop\sim test';
+sim_data = load(fullfile(path_sim, file_sim));
+fieldname = fieldnames(sim_data);
+sim_data = sim_data.(fieldname{1});
+extrac_data = load(fullfile(path_extrac, file_extrac));
+fieldname = fieldnames(extrac_data);
+extrac_data = extrac_data.(fieldname{1});
+
+% (MANUAL)Open simulated and extracted file manually using file UIs
+%[sim_data, extrac_data] = open_sim_fileUI;
+
 %% Set variables
 end_loc       = length(sim_data.data); % End loc of the simulation
 extracted_dt  = extrac_data.dt; % dt used to calculate sampling rate of extracted
 simulated_loc = sim_data.report.locs; % simulated sp locations 
 extracted_loc = time2idx_units(extrac_data.APstimes, extracted_dt); % extracted sp locations 
+sim_          = sim_data.data; % Actual simulation data (all naxons with noise, drift etc)
+sim_axons     = sim_data.axons; % Individual axon simulation (without noise)
 
 %% Plot simulated and extracted spike locations
-plot_sp_loc(simulated_loc, extracted_loc, end_loc);
+plot_sp_loc(simulated_loc, extracted_loc, end_loc, sim_);
 title(['RAW DATA COMPARISON' newline 'Top half is simulated and bottom half is extracted' newline 'Extracted is sorted into tiers based on shape and family']);
 
 %% Compare
@@ -138,14 +140,47 @@ end
 
 try 
     % Plot compared data
-    plot_sp_loc(simulated_loc, matched_loc, end_loc);
+    plot_sp_loc(simulated_loc, matched_loc, end_loc, sim_);
     title('EXTRACTED SPIKES THAT MATCH A SIM SPIKE');
 catch
     error('No matching spikes found (╯°□°）╯. Try increasing the tolerance variable to increase detection range');
 end
 
-
 %% Compare report
+report = compare_report(simulated_loc, extracted_loc, matched_loc);
+
+%% Amplitude & noise level plot
+figure;
+hold on;
+max_peak_amps = max(sim_axons);
+for i = 1 : size(sim_axons, 2)
+    [peaks, locs] = findpeaks(sim_axons(:,i), 'MinPeakHeight', 0.1, 'MinPeakProminence', max_peak_amps(i)/3);
+    %pks{i} = [locs peaks];
+    plot(locs, peaks/max(max_peak_amps), 'o', 'MarkerSize', 1.5);
+    title('Amplitude of each naxon');
+    axis([0 size(sim_axons, 1) 0 1]);
+    naxon_legend{i} = ['% Naxon ' num2str(i) ': ' num2str(report.percent_naxon(i))]; 
+end
+% Plot the noise rms level
+noise_rms = rms(sim_(1:2000));
+plot([0 length(sim_)], [noise_rms noise_rms], 'g-');
+
+naxon_legend{end+1} = 'Noise RMS lvl';
+legend(naxon_legend);
+
+%% Save to Excel file
+enable_excel = input('Save report to Excel sheet? (Y/blank) :', 's');
+excel_file = 'C:\Users\chris\Desktop\compare_report.xlsx';
+headings = {'Naxon', 'AP', 'Family', '%family', '%naxon'};
+
+if strcmpi(enable_excel,'y')
+    writecell({'Sim file:', file_sim, '', 'Extrac_file:', file_extrac}, excel_file, 'Sheet', 1, 'Range', 'A1');
+    writecell(headings, excel_file, 'Sheet', 1, 'Range', 'A2');
+    writematrix(report.table,excel_file,'Sheet',1,'Range','A3');
+end
+
+%% Compare report function
+function report = compare_report(simulated_loc, extracted_loc, matched_loc)
 total_num_simulated_sp = 0;
 for naxon = 1:length(simulated_loc)
     total_num_simulated_sp = total_num_simulated_sp + length(simulated_loc{naxon});
@@ -182,7 +217,9 @@ fprintf([' SIM  |               EXTRAC'                       newline ...
          'Naxon |  AP      Family    %%family      %%naxon'    newline ...
                               row_border                              ...
          ]);
-row = 1;
+row = 1; 
+report.table = []; %Initialize report stuff
+report.percent_naxon = zeros([length(simulated_loc) 1]);
 for naxon = 1:length(simulated_loc)
     family_matched_axon_flag = 0; % Set a marker/flag which indicates whether the naxon succesfully matched a family
     
@@ -197,15 +234,7 @@ for naxon = 1:length(simulated_loc)
                     % extracted_matched / num of sp in sim naxon
                     percent_naxon = extracted_matched / length(simulated_loc{naxon});
                     
-                    % Record into table variable
-                    table(row, 1) = naxon;
-                    table(row, 2) = AP_num;
-                    table(row, 3) = family_num;
-                    table(row, 4) = percent_family;
-                    table(row, 5) = percent_naxon;
-                    row = row + 1;
-                    
-                    % Print the row
+                    % Print the row onto cmd window
                     fprintf(['  %d   |   %d         %d        %0.2f        %0.2f' newline], ...
                              naxon,           ...
                              AP_num,          ...
@@ -213,7 +242,16 @@ for naxon = 1:length(simulated_loc)
                              percent_family,  ...
                              percent_naxon    ...
                              );
-                         
+                    % Record into table variable
+                    report.table(row, 1) = naxon;
+                    report.table(row, 2) = AP_num;
+                    report.table(row, 3) = family_num;
+                    report.table(row, 4) = percent_family;
+                    report.table(row, 5) = percent_naxon;
+                    
+                    report.percent_naxon(naxon) = report.percent_naxon(naxon) + percent_naxon; 
+                    
+                    row = row + 1;
                     family_matched_axon_flag = 1; % Set a marker that a family was found to match the naxon
                 end
             end %if naxon == matched_loc{AP_num}{family_num, 2}
@@ -230,8 +268,10 @@ for naxon = 1:length(simulated_loc)
 
 end %for naxon = 1:length(simulated_loc)
 
-%%
-function plot_sp_loc(simulated_loc, extacORmatch_loc, end_loc)
+end
+
+%% Plot sim&extrac and sim&matched stem plots
+function plot_sp_loc(simulated_loc, extacORmatch_loc, end_loc, sim_)
 
 figure;
 hold on;
@@ -241,6 +281,10 @@ for naxon = 1:length(simulated_loc)
     naxon_tier = ((naxon-1) / length(simulated_loc)) * 0.1; % Factor used to visually separate each naxon on the plot
     stem(simulated_loc{naxon}, ones(size(simulated_loc{naxon})) - naxon_tier);
 end
+
+% Plot actual simulation
+sim_plot = plot(sim_);
+sim_plot.Color(4) = 0.2;
 
 % Plot extracted sp locations
 for AP_num = 1:length(extacORmatch_loc)
@@ -260,6 +304,7 @@ plot([0 end_loc], [0.6 0.6], 'g');
 
 end
 
+%% Open the files using file UI
 function [sim_data, extrac_data]= open_sim_fileUI
 
 try
@@ -283,6 +328,7 @@ end
 
 end
 
+%% 
 function extracted_loc = time2idx_units(extracted_loc, extracted_dt)
 
 % Convert the extracted spike locs which are originally in units of time[s]

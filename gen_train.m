@@ -199,7 +199,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
          sr = 9 * exp(-(1:numel(isi)-inf_sample)/(tau)) + 1; % Get an exponential from 10 to 1 with time constant tau
          isi(inf_sample + 1:end) = isi(inf_sample + 1:end)./sr';
          % Remove isi that are closer than the duration of a spike
-         isi(isi <= templates(currentTemplate).abs_refract_index) = [];
+         isi(isi <= templates(currentTemplate).refract_index) = [];
          isi = ceil(isi);
       end
       
