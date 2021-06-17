@@ -30,8 +30,8 @@ clear
 % The extracted sp must be between the positive and negative tolerance
 % values of ONE simulated sp for it to be considered match
 % Can be adjusted smaller to be more sensitive
-pos_tolerance = 40; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
-neg_tolerance = 40; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
+pos_tolerance = 10; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
+neg_tolerance = 10; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
 fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_tolerance);
 
 %% CHANGE OVERLAP MODE HERE
@@ -43,9 +43,9 @@ if allow_overlap == 1; fprintf('<strong>OVERLAP MODE ENABLED</strong> simulated 
 
 %% LOAD DATA (COMMENT OUT THE MANUAL OR AUTOMATIC SECTION AS NEEDED)
 % (AUTO)Open simulated and extracted file automatically (Change file directories when needed)
-file_sim    = 'sim3.mat';%'sim_artemio8.mat';%'simulated1.mat';
+file_sim    = 'sim11.mat';%'sim_artemio8.mat';%'simulated1.mat';
 path_sim    = 'C:\Users\chris\Desktop\sim test';
-file_extrac = 'extrac3.mat';%'data_Art8.mat';%'extracted1.mat';
+file_extrac = 'extrac11.mat';%'data_Art8.mat';%'extracted1.mat';
 path_extrac = 'C:\Users\chris\Desktop\sim test';
 sim_data = load(fullfile(path_sim, file_sim));
 fieldname = fieldnames(sim_data);
@@ -61,7 +61,7 @@ extrac_data = extrac_data.(fieldname{1});
 end_loc       = length(sim_data.data); % End loc of the simulation
 extracted_dt  = extrac_data.dt; % dt used to calculate sampling rate of extracted
 simulated_loc = sim_data.report.locs; % simulated sp locations 
-extracted_loc = time2idx_units(extrac_data.APstimes, extracted_dt); % extracted sp locations 
+extracted_loc = time2idx_units(extrac_data.(field), extracted_dt); % extracted sp locations 
 sim_          = sim_data.data; % Actual simulation data (all naxons with noise, drift etc)
 sim_axons     = sim_data.axons; % Individual axon simulation (without noise)
 
@@ -161,23 +161,27 @@ for i = 1 : size(sim_axons, 2)
     axis([0 size(sim_axons, 1) 0 1]);
     naxon_legend{i} = ['% Naxon ' num2str(i) ': ' num2str(report.percent_naxon(i))]; 
 end
-% Plot the noise rms level
-noise_rms = rms(sim_(1:2000));
+% Plot the noise rms level [HAS ITS FLAWS WIP]
+offset = 0; 
+if simulated_loc{1,1}(1) <= 1100; offset = simulated_loc{1,1}(1)+100; end % Offset incase there is a spike within the first 1000 idxs
+noise_rms = rms(sim_(1+offset:1000+offset)) / max(sim_);
 plot([0 length(sim_)], [noise_rms noise_rms], 'g-');
-
 naxon_legend{end+1} = 'Noise RMS lvl';
 legend(naxon_legend);
 
-%% Save to Excel file
-enable_excel = input('Save report to Excel sheet? (Y/blank) :', 's');
-excel_file = 'C:\Users\chris\Desktop\compare_report.xlsx';
-headings = {'Naxon', 'AP', 'Family', '%family', '%naxon'};
+%% Confusion matrix
 
-if strcmpi(enable_excel,'y')
-    writecell({'Sim file:', file_sim, '', 'Extrac_file:', file_extrac}, excel_file, 'Sheet', 1, 'Range', 'A1');
-    writecell(headings, excel_file, 'Sheet', 1, 'Range', 'A2');
-    writematrix(report.table,excel_file,'Sheet',1,'Range','A3');
-end
+
+%% Save to Excel file
+% enable_excel = input('Save report to Excel sheet? (Y/blank) :', 's');
+% excel_file = 'C:\Users\chris\Desktop\compare_report.xlsx';
+% headings = {'Naxon', 'AP', 'Family', '%family', '%naxon'};
+% 
+% if strcmpi(enable_excel,'y')
+%     writecell({'Sim file:', file_sim, '', 'Extrac_file:', file_extrac}, excel_file, 'Sheet', 1, 'Range', 'A1');
+%     writecell(headings, excel_file, 'Sheet', 1, 'Range', 'A2');
+%     writematrix(report.table,excel_file,'Sheet',1,'Range','A3');
+% end
 
 %% Compare report function
 function report = compare_report(simulated_loc, extracted_loc, matched_loc)
@@ -258,12 +262,12 @@ for naxon = 1:length(simulated_loc)
         end %for family_num = 1:size(matched_loc{AP_num}, 1)
     end %for AP_num = 1:length(matched_loc)
     
-    if family_matched_axon_flag == 0
+    if family_matched_axon_flag
         % Print the row if there are no matching families to the simulated naxon
         fprintf(['  %d   |              no match' newline], naxon);
-        fprintf([row_border]);
+        fprintf(row_border);
     else
-        fprintf([row_border]);
+        fprintf(row_border);
     end
 
 end %for naxon = 1:length(simulated_loc)
@@ -273,7 +277,8 @@ end
 %% Plot sim&extrac and sim&matched stem plots
 function plot_sp_loc(simulated_loc, extacORmatch_loc, end_loc, sim_)
 
-figure;
+fig_handle = figure;
+clf(fig_handle);
 hold on;
 
 % Plot simlated sp locations
@@ -283,8 +288,8 @@ for naxon = 1:length(simulated_loc)
 end
 
 % Plot actual simulation
-sim_plot = plot(sim_);
-sim_plot.Color(4) = 0.2;
+sim_plot = plot(1.2*sim_/max(sim_));
+sim_plot.Color(4) = 0.3;
 
 % Plot extracted sp locations
 for AP_num = 1:length(extacORmatch_loc)
