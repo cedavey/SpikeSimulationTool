@@ -280,7 +280,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    
    % If the amplitude of all spikes change due to a disturbance, simply
    % multiply all the values of v_ after the change in time.
-   if (amp_disturbance_onset > 0) && (0 < amp_disturbance_probability)
+   if (amp_disturbance_onset > 0) && (rand < amp_disturbance_probability)
       vv(amp_disturbance_onset : end, : ) = vv(amp_disturbance_onset : end, : ) * amp_disturbance_value;
    else
        report.opts.Events.amplitude_dist_onset = NaN; % If disturbance does not occur, set the disturbance onset time to NaN
@@ -288,32 +288,41 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    
    report.locs = locs;
    report.spks = spks;
-   report.templates = templates_'; % Records the template num allocation
+   report.templatesUsed = templates(templates_)'; % Record the templates used
    
    % Categorizes axons into families (same family if they have the same
    % template) THIS CODE NEEDS TO BE UPDATED TO ACCODMATE NATURAL
    % DISTURBANCE as it only works with external disturbance for now AND
-   % NEEDS TO BE ORDERED FROM largest to smallest amplitude
-   n = 1;
-   templatesNfamilies = zeros(size(templates_'));
-   for i = unique(templates_) 
-       templatesNfamilies(templates_'==i) = n; % Changes the template num to start from 1,2,3... to follow how the extractor orders it
-       n=n+1;
-   end
-   templatesNfamilies = num2cell(templatesNfamilies); % Changes from matrix to cell
-   templatesNfamilies(:, end+1) = num2cell([st_time' end_time'], 2); % add the start and end times of each axon
+   temp_fam_groupings(:,2) = templates_';%temp_fam_groupings = zeros(size(templates_', 1), 2);
+   temp_fam_groupings(:,1) = (1:Naxons)';
+%    n = 1;
+%    for i = unique(templates_) 
+%        temp_fam_groupings(templates_'==i, 2) = n; % Changes the template num to start from 1,2,3... to follow how the extractor orders it
+%        n=n+1;
+%    end
+   temp_fam_groupings = num2cell(temp_fam_groupings); % Changes from matrix to cell
+   
    % add the onset time of Disturbance since a change in amplitude greater
    % than 10% will be grouped to a different family NEEDS TO BE CONFIRMED 
    change_amp_diff_fam = 0.1; % ADJUST THIS VALUE TO MAKE IT MORE OR LESS SENSITIVE TO CHANGING FAMILIES
+   family_st_end = num2cell([st_time' end_time'], 2); % add the start and end times of each axon
    if ~isnan(opts.Events.amplitude_dist_onset) && (amp_disturbance_value > 1+change_amp_diff_fam || amp_disturbance_value < 1-change_amp_diff_fam)
-       for ii = 1 : size(templatesNfamilies, 1)
+       for ii = 1 : Naxons
            if amp_disturbance_onset > st_time(ii) && amp_disturbance_onset < end_time(ii) % Checks if the disturbance occurs while the axon is active
-               templatesNfamilies{ii, 2} = [templatesNfamilies{ii, 2}(1), amp_disturbance_onset, templatesNfamilies{ii, 2}(2)];
+               family_st_end{ii} = [family_st_end{ii}(1), amp_disturbance_onset, family_st_end{ii}(2)];
            end
        end
    end
    
-   report.templatesNfamilies = cell2struct(templatesNfamilies, {'template', 'family_st_end'}, 2);
+   % Allocates the sptimes of each naxon to a family
+   for ii = 1 : Naxons
+       for iii = 1 : length(family_st_end{ii})-1
+           temp_fam_groupings{ii, 3}{iii,1} = locs{ii}(and(locs{ii} >= family_st_end{ii}(iii),locs{ii} < family_st_end{ii}(iii+1)));
+       end
+   end
+   
+   % Assigns the family and template groupings to a field in the report
+   report.tempFamGroupings = cell2struct(temp_fam_groupings, {'Naxon', 'template', 'family_sptimes'}, 2);
       
    % Close progress bar
    try delete(w); catch E, fprintf(2,'\t%s\n',E.message); end
