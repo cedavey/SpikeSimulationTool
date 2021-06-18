@@ -304,7 +304,8 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    templatesNfamilies(:, end+1) = num2cell([st_time' end_time'], 2); % add the start and end times of each axon
    % add the onset time of Disturbance since a change in amplitude greater
    % than 10% will be grouped to a different family NEEDS TO BE CONFIRMED 
-   if ~isnan(opts.Events.amplitude_dist_onset) && (amp_disturbance_value > 1.1 || amp_disturbance_value < 0.9)
+   change_amp_diff_fam = 0.1; % ADJUST THIS VALUE TO MAKE IT MORE OR LESS SENSITIVE TO CHANGING FAMILIES
+   if ~isnan(opts.Events.amplitude_dist_onset) && (amp_disturbance_value > 1+change_amp_diff_fam || amp_disturbance_value < 1-change_amp_diff_fam)
        for ii = 1 : size(templatesNfamilies, 1)
            if amp_disturbance_onset > st_time(ii) && amp_disturbance_onset < end_time(ii) % Checks if the disturbance occurs while the axon is active
                templatesNfamilies{ii, 2} = [templatesNfamilies{ii, 2}(1), amp_disturbance_onset, templatesNfamilies{ii, 2}(2)];
@@ -312,7 +313,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
        end
    end
    
-   report.templatesNfamilies = templatesNfamilies;
+   report.templatesNfamilies = cell2struct(templatesNfamilies, {'template', 'family_st_end'}, 2);
       
    % Close progress bar
    try delete(w); catch E, fprintf(2,'\t%s\n',E.message); end
