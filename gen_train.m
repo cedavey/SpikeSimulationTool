@@ -316,7 +316,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    end
    
    % add the onset time for Natural Disturbance
-   if amped ~= 0 && (end_amp > change_amp_diff_fam || end_amp < -change_amp_diff_fam)
+   if ~isequal(amped, 0) && (end_amp > change_amp_diff_fam || end_amp < -change_amp_diff_fam)
        for ii = amped
            if amp_time > st_time(ii) && amp_time < end_time(ii) % Checks if the disturbance occurs while the axon is active
                family_st_end{ii}(end+1) = amp_time;
