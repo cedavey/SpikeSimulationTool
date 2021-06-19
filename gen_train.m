@@ -283,6 +283,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    if (amp_disturbance_onset > 0) && (rand < amp_disturbance_probability)
       vv(amp_disturbance_onset : end, : ) = vv(amp_disturbance_onset : end, : ) * amp_disturbance_value;
    else
+       amp_disturbance_onset = NaN;
        report.opts.Events.amplitude_dist_onset = NaN; % If disturbance does not occur, set the disturbance onset time to NaN
    end
    
@@ -292,7 +293,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    
    % Categorizes axons into families (same family if they have the same
    % template) THIS CODE NEEDS TO BE UPDATED TO ACCODMATE NATURAL
-   % DISTURBANCE as it only works with external disturbance for now AND
+   % DISTURBANCE as it only works with external disturbance for now 
    temp_fam_groupings(:,2) = templates_';%temp_fam_groupings = zeros(size(templates_', 1), 2);
    temp_fam_groupings(:,1) = (1:Naxons)';
 %    n = 1;
@@ -302,7 +303,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
 %    end
    temp_fam_groupings = num2cell(temp_fam_groupings); % Changes from matrix to cell
    
-   % add the onset time of Disturbance since a change in amplitude greater
+   % add the onset time of External Disturbance since a change in amplitude greater
    % than 10% will be grouped to a different family NEEDS TO BE CONFIRMED 
    change_amp_diff_fam = 0.1; % ADJUST THIS VALUE TO MAKE IT MORE OR LESS SENSITIVE TO CHANGING FAMILIES
    family_st_end = num2cell([st_time' end_time'], 2); % add the start and end times of each axon
@@ -314,10 +315,21 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
        end
    end
    
+   % add the onset time for Natural Disturbance
+   if amped ~= 0 && (end_amp > change_amp_diff_fam || end_amp < -change_amp_diff_fam)
+       for ii = amped
+           if amp_time > st_time(ii) && amp_time < end_time(ii) % Checks if the disturbance occurs while the axon is active
+               family_st_end{ii}(end+1) = amp_time;
+               family_st_end{ii} = sort(family_st_end{ii}, 'ascend'); % Sorts it so that family times will occur in the right order
+           end
+       end
+   end
+   
    % Allocates the sptimes of each naxon to a family
    for ii = 1 : Naxons
        for iii = 1 : length(family_st_end{ii})-1
            temp_fam_groupings{ii, 3}{iii,1} = locs{ii}(and(locs{ii} >= family_st_end{ii}(iii),locs{ii} < family_st_end{ii}(iii+1)));
+           temp_fam_groupings{ii, 3} = temp_fam_groupings{ii, 3}(~cellfun('isempty', temp_fam_groupings{ii, 3})); % Deletes family group with no actual sp in it (rare occurs but does)
        end
    end
    
