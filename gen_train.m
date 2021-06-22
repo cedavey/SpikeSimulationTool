@@ -289,7 +289,7 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    
    report.locs = locs;
    report.spks = spks;
-   report.templatesUsed = templates(templates_)'; % Record the templates used
+   report.templatesUsed = templates(templates_); % Record the templates used
    
    % Categorizes axons into families (same family if they have the same
    % template) THIS CODE NEEDS TO BE UPDATED TO ACCODMATE NATURAL
@@ -319,22 +319,35 @@ function [vv, report] = run_simulation(Naxons, templates, fs, duration ,opts ,am
    if ~isequal(amped, 0) && (end_amp > change_amp_diff_fam || end_amp < -change_amp_diff_fam)
        for ii = amped
            if amp_time > st_time(ii) && amp_time < end_time(ii) % Checks if the disturbance occurs while the axon is active
-               family_st_end{ii}(end+1) = amp_time;
+               family_st_end{ii}(end+1) = amp_time; % Adds the natural disturbance onset to the end, this will be fixed in the next line
                family_st_end{ii} = sort(family_st_end{ii}, 'ascend'); % Sorts it so that family times will occur in the right order
            end
        end
    end
    
-   % Allocates the sptimes of each naxon to a family
+   % Allocates the sptimes of each naxon to a family and the family num
    for ii = 1 : Naxons
        for iii = 1 : length(family_st_end{ii})-1
            temp_fam_groupings{ii, 3}{iii,1} = locs{ii}(and(locs{ii} >= family_st_end{ii}(iii),locs{ii} < family_st_end{ii}(iii+1)));
            temp_fam_groupings{ii, 3} = temp_fam_groupings{ii, 3}(~cellfun('isempty', temp_fam_groupings{ii, 3})); % Deletes family group with no actual sp in it (rare occurs but does)
+           
+           % Family num
+           family_offset = 0;
+           if ii > 1 % pass the first axon
+               repeat_shape_idx = find(temp_fam_groupings{ii,2} == [temp_fam_groupings{1:ii-1, 2}]);
+               if any(repeat_shape_idx)
+                   for n = (repeat_shape_idx)
+                       family_offset = length(temp_fam_groupings{n,3}) + family_offset;
+                   end
+               end
+           end
+           temp_fam_groupings{ii, 4} = (1:(length(family_st_end{ii})-1)) + family_offset;
        end
    end
    
    % Assigns the family and template groupings to a field in the report
-   report.tempFamGroupings = cell2struct(temp_fam_groupings, {'Naxon', 'template', 'family_sptimes'}, 2);
+   tempFamGroupings = cell2struct(temp_fam_groupings, {'Naxon', 'template', 'family_sptimes', 'family_num'}, 2);
+   report.tempFamGroupings = tempFamGroupings';
       
    % Close progress bar
    try delete(w); catch E, fprintf(2,'\t%s\n',E.message); end

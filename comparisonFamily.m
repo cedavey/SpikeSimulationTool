@@ -38,7 +38,7 @@ fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_toleranc
 % This will allow simulated sp which have detected >1 extraced sp to save the
 % closest one while others are reported in the command line. ONLY USE IF
 % TOLERANCE CAN'T BE TUNED BETTER
-allow_overlap = 0; % 0=disabled   1=enabled
+allow_overlap = 1; % 0=disabled   1=enabled
 if allow_overlap == 1; fprintf('<strong>OVERLAP MODE ENABLED</strong> simulated sp with >1 matching extracted sp will be allowed and reported\n'); end
 
 %% LOAD DATA (COMMENT OUT THE MANUAL OR AUTOMATIC SECTION AS NEEDED)
@@ -64,6 +64,7 @@ simulated_loc = sim_data.report.locs; % simulated sp locations
 extracted_loc = time2idx_units(extrac_data.APstimes, extracted_dt); % extracted sp locations 
 sim_          = sim_data.data; % Actual simulation data (all naxons with noise, drift etc)
 sim_axons     = sim_data.axons; % Individual axon simulation (without noise)
+sim_tempFamGroupings = sim_data.report.tempFamGroupings; % Groupings of sim axons based on family and shape
 
 %% Plot simulated and extracted spike locations
 plot_sp_loc(simulated_loc, extracted_loc, end_loc, sim_);
@@ -72,53 +73,57 @@ title(['RAW DATA COMPARISON' newline 'Top half is simulated and bottom half is e
 %% Compare
 % Iterate through all extracted sp to find matching simulated sp
 % Loops through each AP shape
-for AP_num = 1:length(extracted_loc)
+for extrac_AP_num = 1:length(extracted_loc)
     % Loops through each family in AP shape
-    for family_num = 1:length(extracted_loc{AP_num})
+    for extrac_family_num = 1:length(extracted_loc{extrac_AP_num})
         % Loops through each simulated naxon
         matched_loc_temp=[];
-        for sim_axon_num = 1:length(simulated_loc)
+        for sim_axon_group = sim_tempFamGroupings
             family_matched_axon_flag = 0;
             
             % Loops through each indivdual simulated sp loc
-            for sim_sploc = simulated_loc{sim_axon_num}'
-                % Determines the idx of matching sp which are within the
-                % tolerance range
-                idx = (extracted_loc{AP_num}{family_num} >= sim_sploc - neg_tolerance & ...
-                       extracted_loc{AP_num}{family_num} <= sim_sploc + pos_tolerance   ...
-                       );
-                
-                % Used for overlap mode
-                if allow_overlap == 1 && sum(idx) > 1
-                    ignored_overlap_sp = find(idx == 1, sum(idx)-1, 'last'); % records the sp which have been ignored
-                    idx = find(idx == 1, 1, 'first'); % Adjust idx so that only the first closest sp is matched
-                    ignored_str = [];
-                    for ignore = ignored_overlap_sp
-                        ignored_str = [ignored_str sprintf('extracted_loc{%d}{%d}(%d), ', AP_num, family_num, ignore)];
-                    end
-                    fprintf(['<strong>OVERLAP MODE ignored: </strong>' ignored_str newline]);
-                end
-                   
-                
-                if ~isempty(extracted_loc{AP_num}{family_num}(idx))
-                    try
-                        % Checks if it the extracted sp was assigned to
-                        % more than one sim sp (this doenst break the code
-                        % but might mess up statistics)
-                        if ~isempty(matched_loc_temp) && ismember(extracted_loc{AP_num}{family_num}(idx), matched_loc_temp(:,1))
-                            fprintf('<strong>WARNING: </strong> extracted_loc{%d}{%d}(%d) assinged to >1 sim naxon. Try decreasing tolerance.\n', AP_num, family_num, find(idx==1));
+            for sim_family_num = 1:length(sim_axon_group.family_sptimes)
+                for sim_sploc = sim_axon_group.family_sptimes{sim_family_num}'
+                    % Determines the idx of matching sp which are within the
+                    % tolerance range
+                    idx = (extracted_loc{extrac_AP_num}{extrac_family_num} >= sim_sploc - neg_tolerance & ...
+                           extracted_loc{extrac_AP_num}{extrac_family_num} <= sim_sploc + pos_tolerance   ...
+                           );
+
+                    % Used for overlap mode
+                    if allow_overlap == 1 && sum(idx) > 1
+                        ignored_overlap_sp = find(idx == 1, sum(idx)-1, 'last'); % records the sp which have been ignored
+                        idx = find(idx == 1, 1, 'first'); % Adjust idx so that only the first closest sp is matched
+                        ignored_str = [];
+                        for ignore = ignored_overlap_sp
+                            ignored_str = [ignored_str sprintf('extracted_loc{%d}{%d}(%d), ', extrac_AP_num, extrac_family_num, ignore)];
                         end
-                        
-                        % Records which simulated when there is a match into a
-                        % temporary variable which is grouped after the for loop
-                        matched_loc_temp(end+1,1) = extracted_loc{AP_num}{family_num}(idx);
-                        matched_loc_temp(end,2) = sim_axon_num; % Records which simulated naxon it belongs to
-                        
-                    catch E
-                        if sum(idx) > 1
-                            error('A sim sp has detected >1 matching extracted sp within tolerance. @ extracted_loc{%d}{%d}(%d). Try decreasing tolerance or enable OVERLAP MODE', AP_num, family_num, find(idx==1, 1, 'first'));
-                        else
-                            rethrow(E)
+                        fprintf(['<strong>OVERLAP MODE ignored: </strong>' ignored_str newline]);
+                    end
+
+
+                    if ~isempty(extracted_loc{extrac_AP_num}{extrac_family_num}(idx))
+                        try
+                            % Checks if it the extracted sp was assigned to
+                            % more than one sim sp (this doenst break the code
+                            % but might mess up statistics)
+                            if ~isempty(matched_loc_temp) && ismember(extracted_loc{extrac_AP_num}{extrac_family_num}(idx), matched_loc_temp(:,1))
+                                fprintf('<strong>WARNING: </strong> extracted_loc{%d}{%d}(%d) assinged to >1 sim naxon. Try decreasing tolerance.\n', extrac_AP_num, extrac_family_num, find(idx==1));
+                            end
+
+                            % Records which simulated when there is a match into a
+                            % temporary variable which is grouped after the for loop
+                            matched_loc_temp(end+1,1) = extracted_loc{extrac_AP_num}{extrac_family_num}(idx);
+                            matched_loc_temp(end,2) = sim_axon_group.Naxon; % Records which simulated naxon it belongs to
+                            matched_loc_temp(end,3) = sim_axon_group.template; % Records matching sim shape/template num
+                            matched_loc_temp(end,4) = sim_axon_group.family_num(sim_family_num); 
+
+                        catch E
+                            if sum(idx) > 1
+                                error('A sim sp has detected >1 matching extracted sp within tolerance. @ extracted_loc{%d}{%d}(%d). Try decreasing tolerance or enable OVERLAP MODE', extrac_AP_num, extrac_family_num, find(idx==1, 1, 'first'));
+                            else
+                                rethrow(E)
+                            end
                         end
                     end
                 end
@@ -126,14 +131,14 @@ for AP_num = 1:length(extracted_loc)
             if ~isempty(matched_loc_temp)
                 % Records the extracted sp that match with a simulated sp
                 % into a larger group variable
-                matched_loc{AP_num}{family_num, 1} = matched_loc_temp;
-                matched_loc{AP_num}{family_num, 2} = unique(matched_loc_temp(:,2))'; % Records which simulated axon the family most likely belongs based on the the majority within the family
-                
+                matched_loc{extrac_AP_num}{extrac_family_num, 1} = matched_loc_temp;
+                matched_loc{extrac_AP_num}{extrac_family_num, 2} = unique(matched_loc_temp(:,2))'; % Records which simulated axon the family most likely belongs based on the the majority within the family
+                matched_loc{extrac_AP_num}{extrac_family_num, 3} = unique(matched_loc_temp(:,3)); %Records template/shape
                 family_matched_axon_flag = 1; 
             end
         end
         if family_matched_axon_flag == 0
-            fprintf('<strong>Extracted AP %d Family %d doesnt have matching naxon.</strong> Try increasing tolerance to make sure all AP shapes are detected if possible\n', AP_num, family_num);
+            fprintf('<strong>Extracted AP %d Family %d doesnt have matching naxon.</strong> Try increasing tolerance to make sure all AP shapes are detected if possible\n', extrac_AP_num, extrac_family_num);
         end
     end
 end
@@ -147,7 +152,7 @@ catch
 end
 
 %% Compare report
-report = compare_report(simulated_loc, extracted_loc, matched_loc);
+report = compare_report(simulated_loc, extracted_loc, matched_loc, sim_tempFamGroupings);
 
 %% Amplitude & noise level plot
 figure;
@@ -184,23 +189,23 @@ legend(naxon_legend);
 % end
 
 %% Compare report function
-function report = compare_report(simulated_loc, extracted_loc, matched_loc)
+function report = compare_report(simulated_loc, extracted_loc, matched_loc, sim_shape_family)
 total_num_simulated_sp = 0;
 for naxon = 1:length(simulated_loc)
     total_num_simulated_sp = total_num_simulated_sp + length(simulated_loc{naxon});
 end
 
 total_num_extracted_sp = 0;
-for AP_num = 1:length(extracted_loc)
-    for family_num = 1:size(extracted_loc{AP_num}, 1)
-        total_num_extracted_sp = total_num_extracted_sp + size(extracted_loc{AP_num}{family_num, 1}, 1);        
+for extrac_AP_num = 1:length(extracted_loc)
+    for extrac_family_num = 1:size(extracted_loc{extrac_AP_num}, 1)
+        total_num_extracted_sp = total_num_extracted_sp + size(extracted_loc{extrac_AP_num}{extrac_family_num, 1}, 1);        
     end
 end
 
 total_num_matched_sp = 0;
-for AP_num = 1:length(matched_loc)
-    for family_num = 1:size(matched_loc{AP_num}, 1)
-        total_num_matched_sp = total_num_matched_sp + size(matched_loc{AP_num}{family_num, 1}, 1);        
+for extrac_AP_num = 1:length(matched_loc)
+    for extrac_family_num = 1:size(matched_loc{extrac_AP_num}, 1)
+        total_num_matched_sp = total_num_matched_sp + size(matched_loc{extrac_AP_num}{extrac_family_num, 1}, 1);        
     end
 end
 
@@ -216,61 +221,84 @@ fprintf('<strong>%.1f%%</strong> (%d/%d) total matched sp / total extracted sp.\
 
 % Prints a table which identifies the extracted spikes belonging to a
 % certain simulated axon
-row_border = '-----------------------------------------------\n';
-fprintf([' SIM  |               EXTRAC'                       newline ...
-         'Naxon |  AP      Family    %%family      %%naxon'    newline ...
-                              row_border                              ...
-         ]);
-row = 1; 
-report.table = []; %Initialize report stuff
-report.percent_naxon = zeros([length(simulated_loc) 1]);
-for naxon = 1:length(simulated_loc)
-    family_matched_axon_flag = 0; % Set a marker/flag which indicates whether the naxon succesfully matched a family
-    
-    for AP_num = 1:length(matched_loc)
-        for family_num = 1:size(matched_loc{AP_num}, 1)
-            for associated_axon = matched_loc{AP_num}{family_num, 2}
-                if naxon == associated_axon
-                    % num of xtracted sp in the family matched to the same naxon
-                    extracted_matched = sum(matched_loc{AP_num}{family_num, 1}(:,2) == naxon);
-                    % extracted_matched / num of sp in family
-                    percent_family = extracted_matched / size(matched_loc{AP_num}{family_num}, 1);
-                    % extracted_matched / num of sp in sim naxon
-                    percent_naxon = extracted_matched / length(simulated_loc{naxon});
-                    
-                    % Print the row onto cmd window
-                    fprintf(['  %d   |   %d         %d        %0.2f        %0.2f' newline], ...
-                             naxon,           ...
-                             AP_num,          ...
-                             family_num,      ...
-                             percent_family,  ...
-                             percent_naxon    ...
-                             );
-                    % Record into table variable
-                    report.table(row, 1) = naxon;
-                    report.table(row, 2) = AP_num;
-                    report.table(row, 3) = family_num;
-                    report.table(row, 4) = percent_family;
-                    report.table(row, 5) = percent_naxon;
-                    
-                    report.percent_naxon(naxon) = report.percent_naxon(naxon) + percent_naxon; 
-                    
-                    row = row + 1;
-                    family_matched_axon_flag = 1; % Set a marker that a family was found to match the naxon
-                end
-            end %if naxon == matched_loc{AP_num}{family_num, 2}
-        end %for family_num = 1:size(matched_loc{AP_num}, 1)
-    end %for AP_num = 1:length(matched_loc)
-    
-    if ~family_matched_axon_flag
-        % Print the row if there are no matching families to the simulated naxon
-        fprintf(['  %d   |              no match' newline], naxon);
-        fprintf(row_border);
-    else
-        fprintf(row_border);
-    end
+% row_border = '-----------------------------------------------\n';
+% fprintf([' SIM  |               EXTRAC'                       newline ...
+%          'Naxon |  AP      Family    %%family      %%naxon'    newline ...
+%                               row_border                              ...
+%          ]);
+% row = 1; 
+% report.table = []; %Initialize report stuff
+% report.percent_naxon = zeros([length(sim_shape_family) 1]);
 
-end %for naxon = 1:length(simulated_loc)
+row = 0; 
+col = 0; 
+for match_AP_num = 1:length(matched_loc)
+    for match_fam_num = 1:size(matched_loc{match_AP_num}, 1)
+        col = col + 1;
+        for sim_axon_num = 1:length(sim_shape_family)
+            for sim_fam_num = sim_shape_family(sim_axon_num).family_num
+                matched_axon = matched_loc{match_AP_num}{match_fam_num, 1}(:,3) == sim_axon_num
+                matched_family = 
+                num_matched = sum( );
+                
+                row = row + 1;
+            end
+        end
+        row = 0;
+    end
+    
+end
+
+
+
+% for naxon = 1:length(sim_shape_family)
+%     for sim_family_num = sim_shape_family(naxon).family_num
+%         family_matched_axon_flag = 0; % Set a marker/flag which indicates whether the naxon succesfully matched a family
+% 
+%         for extrac_AP_num = 1:length(matched_loc)
+%             for extrac_family_num = 1:size(matched_loc{extrac_AP_num}, 1)
+%                 for associated_axon = matched_loc{extrac_AP_num}{extrac_family_num, 2}
+%                     if naxon == associated_axon
+%                         % num of xtracted sp in the family matched to the same naxon
+%                         extracted_matched = sum(matched_loc{extrac_AP_num}{extrac_family_num, 1}(:,2) == naxon);
+%                         % extracted_matched / num of sp in family
+%                         percent_family = extracted_matched / size(matched_loc{extrac_AP_num}{extrac_family_num}, 1);
+%                         % extracted_matched / num of sp in sim naxon
+%                         percent_naxon = extracted_matched / length(simulated_loc{naxon});
+% 
+%                         % Print the row onto cmd window
+%     %                     fprintf(['  %d   |   %d         %d        %0.2f        %0.2f' newline], ...
+%     %                              naxon,           ...
+%     %                              extrac_AP_num,          ...
+%     %                              extrac_family_num,      ...
+%     %                              percent_family,  ...
+%     %                              percent_naxon    ...
+%     %                              );
+%                         % Record into table variable
+%                         report.table(row, 1) = naxon;
+%                         report.table(row, 2) = extrac_AP_num;
+%                         report.table(row, 3) = extrac_family_num;
+%                         report.table(row, 4) = percent_family;
+%                         report.table(row, 5) = percent_naxon;
+% 
+%                         report.percent_naxon(naxon) = report.percent_naxon(naxon) + percent_naxon; 
+% 
+%                         row = row + 1;
+%                         family_matched_axon_flag = 1; % Set a marker that a family was found to match the naxon
+%                     end
+%                 end %if naxon == matched_loc{AP_num}{family_num, 2}
+%             end %for family_num = 1:size(matched_loc{AP_num}, 1)
+%         end %for AP_num = 1:length(matched_loc)
+% 
+%         if ~family_matched_axon_flag
+%             % Print the row if there are no matching families to the simulated naxon
+%             fprintf(['  %d   |              no match' newline], naxon);
+%             fprintf(row_border);
+%         else
+%             fprintf(row_border);
+%         end
+%     end
+% end %for naxon = 1:length(simulated_loc)
 
 end
 
