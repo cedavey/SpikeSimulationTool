@@ -18,13 +18,13 @@
 %    detected >1 extraced sp to only save the closest one while the ignored ones are reported 
 %    in the command line. Try not to do it when you first run and only as a
 %    last resort when you see that the extracted sp are too close together
-%
+% 3.5) Set which plots and files you want to save.
 % 4) Run script
 %
 % 5) Pray everyting goes right
 
 close all
-clear
+%clear
 
 %% ADJUST TOLERANCE HERE
 % The extracted sp must be between the positive and negative tolerance
@@ -41,23 +41,33 @@ fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_toleranc
 allow_overlap = 1; % 0=disabled   1=enabled
 if allow_overlap == 1; fprintf('<strong>OVERLAP MODE ENABLED</strong> simulated sp with >1 matching extracted sp will be allowed and reported\n'); end
 
-%% CHANGE WHICH PLOTS WILL SHOW
-plot_raw_sptimes = 0;
+%% CHANGE WHICH PLOTS WILL SHOW AND which files types to save
+plot_raw_sptimes     = 0;
 plot_matched_sptimes = 0;
-plot_amp_noise = 0;
-plot_certainty_tbl = 1;
+plot_amp_noise       = 0;
+plot_certainty_tbl   = 1;
 save2excel = 0;
+savereport = 0;
 
-%% LOAD DATA (COMMENT OUT THE MANUAL OR AUTOMATIC SECTION AS NEEDED)
+%% FILE DIRECTORIES / LOAD DATA (COMMENT OUT THE MANUAL OR AUTOMATIC SECTION AS NEEDED)
 % (AUTO)Open simulated and extracted file automatically (Change file directories when needed)
-file_sim    = 'simtest.mat';%'sim_artemio8.mat';%'simulated1.mat';
-path_sim    = 'C:\Users\chris\Desktop\sim test';
-file_extrac = 'extractest.mat';%'data_Art8.mat';%'extracted1.mat';
-path_extrac = 'C:\Users\chris\Desktop\sim test';
-sim_data = load(fullfile(path_sim, file_sim));
+% Simulation file
+filename_sim    = 'simtest.mat';%'sim_artemio8.mat';%'simulated1.mat';
+filepath_sim    = 'C:\Users\chris\Desktop\testfiles\sim';
+% Extrac file
+filename_extrac = 'extractest.mat';%'data_Art8.mat';%'extracted1.mat';
+filepath_extrac = 'C:\Users\chris\Desktop\testfiles\extract';
+% Report folder location (for saving report struct .mat)
+filepath_report = 'C:\Users\chris\Desktop\testfiles\reports';
+% Excel sheet file
+filename_excel  = 'C:\Users\chris\Desktop\testfiles\compare_report.xlsx';
+
+
+% Extracts data
+sim_data = load(fullfile(filepath_sim, filename_sim));
 fieldname = fieldnames(sim_data);
 sim_data = sim_data.(fieldname{1});
-extrac_data = load(fullfile(path_extrac, file_extrac));
+extrac_data = load(fullfile(filepath_extrac, filename_extrac));
 fieldname = fieldnames(extrac_data);
 extrac_data = extrac_data.(fieldname{1});
 
@@ -163,7 +173,7 @@ if plot_matched_sptimes
 end
 
 %% Compare report
-report = compare_report(simulated_loc, extracted_loc, matched_loc, sim_tempFamGroupings);
+report = compare_report(simulated_loc, extracted_loc, matched_loc, sim_tempFamGroupings, filename_sim, filename_extrac);
 
 %% Amplitude & noise level plot
 if plot_amp_noise
@@ -231,20 +241,25 @@ end
 
 %% Save to Excel file
 %enable_excel = input('Save report to Excel sheet? (Y/blank) :', 's');
-excel_file = 'C:\Users\chris\Desktop\compare_report.xlsx';
 
 if save2excel% && strcmpi(enable_excel,'y')
-    writecell({'Sim file:'                   , file_sim                      ,'' , 'Extrac_file:' , file_extrac; ...
+    writecell({'Sim file:'                   , filename_sim                      ,'' , 'Extrac_file:' , filename_extrac; ...
                report.match_accuracy         , 'total matched / total sim'   ,'' , datetime('now'), ''         ; ...
                report.correctly_identified_sp, 'total matched / total extrac','' , ''             , ''           ...
                }, ...
-               excel_file, 'Sheet', file_sim, 'WriteMode', 'append');
-    writetable(certainty_table,      excel_file, 'Sheet', file_sim, 'WriteMode', 'append', 'WriteRowNames', true, 'WriteVariableNames', true);
-    writetable(percent_family_table, excel_file, 'Sheet', file_sim, 'WriteMode', 'append', 'WriteRowNames', true, 'WriteVariableNames', true);
+               filename_excel, 'Sheet', filename_sim, 'WriteMode', 'append');
+    writetable(certainty_table,      filename_excel, 'Sheet', filename_sim, 'WriteMode', 'append', 'WriteRowNames', true, 'WriteVariableNames', true);
+    writetable(percent_family_table, filename_excel, 'Sheet', filename_sim, 'WriteMode', 'append', 'WriteRowNames', true, 'WriteVariableNames', true);
+end
+
+%% Save report to .mat
+if savereport
+    filename_report = ['report_' filename_sim(1:end-4) '_' filename_extrac];
+    save(fullfile(filepath_report, filename_report), 'report', '-mat');
 end
 
 %% Compare report function
-function report = compare_report(simulated_loc, extracted_loc, matched_loc, sim_shape_family)
+function report = compare_report(simulated_loc, extracted_loc, matched_loc, sim_shape_family, filename_sim, filename_extrac)
 total_num_simulated_sp = 0;
 for naxon = 1:length(simulated_loc)
     total_num_simulated_sp = total_num_simulated_sp + length(simulated_loc{naxon});
@@ -324,6 +339,8 @@ report.percent_family = percent_family;
 report.percent_naxon = percent_naxon;
 report.match_accuracy = match_accuracy;
 report.correctly_identified_sp = correctly_identified_sp;
+report.filename_sim = filename_sim;
+report.filename_extrac = filename_extrac;
 
 % for naxon = 1:length(sim_shape_family)
 %     for sim_family_num = sim_shape_family(naxon).family_num
