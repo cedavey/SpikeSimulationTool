@@ -31,7 +31,7 @@ clear
 % values of ONE simulated sp for it to be considered match
 % Can be adjusted smaller to be more sensitive
 pos_tolerance = 40; % Right of simulated sp (main one to adjust since extracted times(based on peak) are usually after simulated times(before peak))
-neg_tolerance = 40; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
+neg_tolerance = 20; % Left of simulated sp (less important but still can be changed if extracted times somehow occurs before sim times)
 fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_tolerance);
 
 %% CHANGE OVERLAP MODE HERE
@@ -40,6 +40,13 @@ fprintf('pos_tolerance = %d ; neg_tolerance = %d\n', pos_tolerance, neg_toleranc
 % TOLERANCE CAN'T BE TUNED BETTER
 allow_overlap = 1; % 0=disabled   1=enabled
 if allow_overlap == 1; fprintf('<strong>OVERLAP MODE ENABLED</strong> simulated sp with >1 matching extracted sp will be allowed and reported\n'); end
+
+%% CHANGE WHICH PLOTS WILL SHOW
+plot_raw_sptimes = 0;
+plot_matched_sptimes = 0;
+plot_amp_noise = 0;
+plot_certainty_tbl = 1;
+save2excel = 0;
 
 %% LOAD DATA (COMMENT OUT THE MANUAL OR AUTOMATIC SECTION AS NEEDED)
 % (AUTO)Open simulated and extracted file automatically (Change file directories when needed)
@@ -67,8 +74,10 @@ sim_axons     = sim_data.axons; % Individual axon simulation (without noise)
 sim_tempFamGroupings = sim_data.report.tempFamGroupings; % Groupings of sim axons based on family and shape
 
 %% Plot simulated and extracted spike locations
-plot_sp_loc(simulated_loc, extracted_loc, end_loc, sim_);
-title(['RAW DATA COMPARISON' newline 'Top half is simulated and bottom half is extracted' newline 'Extracted is sorted into tiers based on shape and family']);
+if plot_raw_sptimes
+    plot_sp_loc(simulated_loc, extracted_loc, end_loc, sim_);
+    title(['RAW DATA COMPARISON' newline 'Top half is simulated and bottom half is extracted' newline 'Extracted is sorted into tiers based on shape and family']);
+end
 
 %% Compare
 % Iterate through all extracted sp to find matching simulated sp
@@ -143,50 +152,96 @@ for extrac_AP_num = 1:length(extracted_loc)
     end
 end
 
-try 
-    % Plot compared data
-    plot_sp_loc(simulated_loc, matched_loc, end_loc, sim_);
-    title('EXTRACTED SPIKES THAT MATCH A SIM SPIKE');
-catch
-    error('No matching spikes found (╯°□°）╯. Try increasing the tolerance variable to increase detection range');
+if plot_matched_sptimes
+    try 
+        % Plot compared data
+        plot_sp_loc(simulated_loc, matched_loc, end_loc, sim_);
+        title('EXTRACTED SPIKES THAT MATCH A SIM SPIKE');
+    catch
+        error('No matching spikes found (╯°□°）╯. Try increasing the tolerance variable to increase detection range');
+    end
 end
 
 %% Compare report
 report = compare_report(simulated_loc, extracted_loc, matched_loc, sim_tempFamGroupings);
 
 %% Amplitude & noise level plot
-figure;
-hold on;
-max_peak_amps = max(sim_axons);
-for i = 1 : size(sim_axons, 2)
-    [peaks, locs] = findpeaks(sim_axons(:,i), 'MinPeakHeight', 0.1, 'MinPeakProminence', max_peak_amps(i)/3);
-    %pks{i} = [locs peaks];
-    plot(locs, peaks/max(max_peak_amps), 'o', 'MarkerSize', 1.5);
-    title('Amplitude of each naxon');
-    axis([0 size(sim_axons, 1) 0 1]);
-    naxon_legend{i} = ['% Naxon ' num2str(i) ': ' num2str(report.percent_naxon(i))]; 
+if plot_amp_noise
+    amp_noise_plot(sim_axons, report, simulated_loc, sim_);
 end
-% Plot the noise rms level [HAS ITS FLAWS WIP]
-offset = 0; 
-if simulated_loc{1,1}(1) <= 1100; offset = simulated_loc{1,1}(1)+100; end % Offset incase there is a spike within the first 1000 idxs
-noise_rms = rms(sim_((1:1000)+offset)) / max(sim_);
-plot([0 length(sim_)], [noise_rms noise_rms], 'g-');
-naxon_legend{end+1} = 'Noise RMS lvl';
-legend(naxon_legend);
 
 %% Confusion matrix
+% Reorder matrix so that the diagonal contains the match
+% if 0
+%     [~, highest_certainty_idx] = sort(max(report.certainty, [], 2), 'descend');
+%     report.certainty = report.certainty(:, highest_certainty_idx);
+%     report.percent_family = report.percent_family(:, highest_certainty_idx);
+%     report.col_headings = report.col_headings(:, highest_certainty_idx);
+% end
 
+% Makes column headings
+col_headings = cell(1, size(report.col_headings, 2));
+for certainty_match = 1:size(report.col_headings, 2)
+    col_headings{certainty_match} = sprintf('match S%d F%d', report.col_headings(1,certainty_match), report.col_headings(2,certainty_match));
+end
+
+% Makes row headings
+row_headings = cell(1, size(report.row_headings, 1));
+for certainty_match = 1:size(report.row_headings, 1)
+    row_headings{certainty_match} = sprintf('sim N%d S%d F%d', report.row_headings(certainty_match,1), report.row_headings(certainty_match,2), report.row_headings(certainty_match,3));
+end
+
+certainty_table = array2table(report.certainty, 'RowNames', row_headings, 'VariableNames', col_headings);
+percent_family_table = array2table(report.percent_family, 'RowNames', row_headings, 'VariableNames', col_headings);
+
+if plot_certainty_tbl
+    ui_handle = uifigure('Position', [50 50 1000 600]);
+    
+    % Table for certainty
+    ui_certainty_table = uitable(ui_handle,'Data', certainty_table, 'RowStriping', 0, 'Position', [10 300 970 250]);
+    table_certainty_title = 'Certainty of each matched family to a sim family';
+    uilabel(ui_handle, 'Text', table_certainty_title, 'Position', [10 570 970 20], 'FontSize', 16);
+    
+    % Table for percentage family
+    ui_family_per_table = uitable(ui_handle,'Data', percent_family_table, 'RowStriping', 0, 'Position', [10 10 970 250]);
+    table_family_per_title = 'Percentage of sim family taken up by that matched family';
+    uilabel(ui_handle, 'Text', table_family_per_title, 'Position', [10 270 970 20], 'FontSize', 16);
+    
+    % FOMRATTING TABLES
+    % Coloring the rows according to their naxon for easier readibility
+    % (odd naxons colored white, odd naxons white)
+    [even_row_idx] = find(~mod(report.row_headings(:,1), 2));
+    odd_naxon_style = uistyle('BackgroundColor', [0.97 0.97 0.97]);
+    addStyle(ui_certainty_table, odd_naxon_style, 'row', even_row_idx);
+    addStyle(ui_family_per_table, odd_naxon_style, 'row', even_row_idx);
+    
+    for certainty_match = 0.2 : 0.2 : 0.8
+        highlight_matches_style = uistyle('BackgroundColor', [1-certainty_match, 1, 1-certainty_match]);
+        
+        % Highlight matching families with certainties given by
+        [match_row_idx, match_col_idx] = find(report.certainty >= certainty_match);
+        addStyle(ui_certainty_table, highlight_matches_style, 'cell', [match_row_idx, match_col_idx]);
+        
+        % Highlight matching families based on percent family
+        [match_row_idx_, match_col_idx_] = find(report.percent_family >= certainty_match);
+        addStyle(ui_family_per_table, highlight_matches_style, 'cell', [match_row_idx_, match_col_idx_]);
+    end
+    
+end
 
 %% Save to Excel file
-% enable_excel = input('Save report to Excel sheet? (Y/blank) :', 's');
-% excel_file = 'C:\Users\chris\Desktop\compare_report.xlsx';
-% headings = {'Naxon', 'AP', 'Family', '%family', '%naxon'};
-% 
-% if strcmpi(enable_excel,'y')
-%     writecell({'Sim file:', file_sim, '', 'Extrac_file:', file_extrac}, excel_file, 'Sheet', 1, 'Range', 'A1');
-%     writecell(headings, excel_file, 'Sheet', 1, 'Range', 'A2');
-%     writematrix(report.table,excel_file,'Sheet',1,'Range','A3');
-% end
+%enable_excel = input('Save report to Excel sheet? (Y/blank) :', 's');
+excel_file = 'C:\Users\chris\Desktop\compare_report.xlsx';
+
+if save2excel% && strcmpi(enable_excel,'y')
+    writecell({'Sim file:'                   , file_sim                      ,'' , 'Extrac_file:' , file_extrac; ...
+               report.match_accuracy         , 'total matched / total sim'   ,'' , datetime('now'), ''         ; ...
+               report.correctly_identified_sp, 'total matched / total extrac','' , ''             , ''           ...
+               }, ...
+               excel_file, 'Sheet', file_sim, 'WriteMode', 'append');
+    writetable(certainty_table,      excel_file, 'Sheet', file_sim, 'WriteMode', 'append', 'WriteRowNames', true, 'WriteVariableNames', true);
+    writetable(percent_family_table, excel_file, 'Sheet', file_sim, 'WriteMode', 'append', 'WriteRowNames', true, 'WriteVariableNames', true);
+end
 
 %% Compare report function
 function report = compare_report(simulated_loc, extracted_loc, matched_loc, sim_shape_family)
@@ -219,29 +274,37 @@ fprintf('<strong>%.1f%%</strong> (%d/%d) total matched sp / total simulated sp.\
 correctly_identified_sp = total_num_matched_sp / total_num_extracted_sp * 100;
 fprintf('<strong>%.1f%%</strong> (%d/%d) total matched sp / total extracted sp.\n', correctly_identified_sp, total_num_matched_sp, total_num_extracted_sp);
 
-% Prints a table which identifies the extracted spikes belonging to a
-% certain simulated axon
-% row_border = '-----------------------------------------------\n';
-% fprintf([' SIM  |               EXTRAC'                       newline ...
-%          'Naxon |  AP      Family    %%family      %%naxon'    newline ...
-%                               row_border                              ...
-%          ]);
-% row = 1; 
-% report.table = []; %Initialize report stuff
-% report.percent_naxon = zeros([length(sim_shape_family) 1]);
-
+% Calculates certainty and 
 row = 0; 
 col = 0; 
+certainty = [];
+percent_family = [];
 for match_AP_num = 1:length(matched_loc)
     for match_fam_num = 1:size(matched_loc{match_AP_num}, 1)
         col = col + 1;
+        col_headings(1, col) = match_AP_num;
+        col_headings(2, col) = match_fam_num;
         for sim_axon_num = 1:length(sim_shape_family)
+            n=1;
             for sim_fam_num = sim_shape_family(sim_axon_num).family_num
-                matched_axon = matched_loc{match_AP_num}{match_fam_num, 1}(:,3) == sim_axon_num
-                matched_family = 
-                num_matched = sum( );
-                
                 row = row + 1;
+                row_headings(row, 1) = sim_axon_num;
+                row_headings(row, 2) = sim_shape_family(sim_axon_num).template;
+                row_headings(row, 3) = sim_fam_num;
+                
+                matched_axon = matched_loc{match_AP_num}{match_fam_num, 1}(:,2) == sim_axon_num;
+                matched_family = matched_loc{match_AP_num}{match_fam_num, 1}(:,4) == sim_fam_num;
+                % number of sp in a matched family that ACTUALLY match to a
+                % specific simulated family
+                num_matched = sum(matched_axon & matched_family);
+                
+                certainty(row, col) = num_matched / size(matched_loc{match_AP_num}{match_fam_num}, 1);
+                
+                percent_family(row, col) = num_matched / size(sim_shape_family(sim_axon_num).family_sptimes{n}, 1);
+                
+                percent_naxon_temp(row, col) = num_matched / length(simulated_loc{sim_axon_num});
+                
+                n=n+1;
             end
         end
         row = 0;
@@ -249,7 +312,18 @@ for match_AP_num = 1:length(matched_loc)
     
 end
 
+percent_naxon = zeros(1,length(simulated_loc));
+for i = 1:length(simulated_loc)
+    percent_naxon(i) = sum(percent_naxon_temp(row_headings(:,1)==i, :), 'all');
+end
 
+report.row_headings = row_headings;
+report.col_headings = col_headings;
+report.certainty = certainty;
+report.percent_family = percent_family;
+report.percent_naxon = percent_naxon;
+report.match_accuracy = match_accuracy;
+report.correctly_identified_sp = correctly_identified_sp;
 
 % for naxon = 1:length(sim_shape_family)
 %     for sim_family_num = sim_shape_family(naxon).family_num
@@ -316,7 +390,7 @@ for naxon = 1:length(simulated_loc)
 end
 
 % Plot actual simulation
-sim_plot = plot(1.2*sim_/max(sim_));
+sim_plot = plot(sim_/max(sim_));
 sim_plot.Color(4) = 0.3;
 
 % Plot extracted sp locations
@@ -375,6 +449,31 @@ for AP_num = 1:length(extracted_loc)
         extracted_loc{AP_num}{family_num} = temp;
     end
 end
+
+end
+
+%% Plot amplitude of naxons and noise levels function
+function amp_noise_plot(sim_axons, report, simulated_loc, sim_)
+figure;
+hold on;
+max_peak_amps = max(sim_axons);
+for i = 1 : size(sim_axons, 2)
+    [peaks, locs] = findpeaks(sim_axons(:,i), 'MinPeakHeight', 0.1, 'MinPeakProminence', max_peak_amps(i)/3);
+    %pks{i} = [locs peaks];
+    plot(locs, peaks/max(max_peak_amps), 'o', 'MarkerSize', 1.5);
+    title('Amplitude of each naxon');
+    %percent_naxon = NaN;%sum(report.percent_family(report.row_headings(:,1)==i, :), 'all');
+    naxon_legend{i} = ['% Naxon ' num2str(i) ': ' num2str(report.percent_naxon(i))]; 
+end
+axis([0 size(sim_axons, 1) 0 1]);
+% Plot the noise standard deviation levels [HAS ITS FLAWS WIP]
+offset = 0; 
+if simulated_loc{1,1}(1) <= 1100; offset = simulated_loc{1,1}(1)+100; end % Offset incase there is a spike within the first 1000 idxs
+noise_std = std(sim_((1:1000)+offset)) / max(max_peak_amps);
+plot([0 length(sim_)], [noise_std noise_std], 'r-'); % 1 std
+plot([0 length(sim_)], 2*[noise_std noise_std], 'g-'); % 2 std
+plot([0 length(sim_)], 3*[noise_std noise_std], 'b-'); % 3 std
+legend(naxon_legend);
 
 end
 

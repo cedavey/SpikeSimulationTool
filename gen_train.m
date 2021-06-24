@@ -350,8 +350,7 @@ end
 function tempFamGroupings = categoriseTempFamGroups(templates_, Naxons, st_time, end_time, amp_disturbance_value, amp_disturbance_onset, amped, amp_time, locs)
 
 % Categorizes axons into families (same family if they have the same
-% template) THIS CODE NEEDS TO BE UPDATED TO ACCODMATE NATURAL
-% DISTURBANCE as it only works with external disturbance for now
+% template)
 temp_fam_groupings(:,2) = templates_';%temp_fam_groupings = zeros(size(templates_', 1), 2);
 temp_fam_groupings(:,1) = (1:Naxons)';
 %    n = 1;
