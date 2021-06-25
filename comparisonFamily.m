@@ -44,7 +44,7 @@ if allow_overlap == 1; fprintf('<strong>OVERLAP MODE ENABLED</strong> simulated 
 %% CHANGE WHICH PLOTS WILL SHOW AND which files types to save
 plot_raw_sptimes     = 0;
 plot_matched_sptimes = 0;
-plot_amp_noise       = 0;
+plot_amp_noise       = 1;
 plot_certainty_tbl   = 1;
 save2excel = 0;
 savereport = 0;
@@ -332,14 +332,14 @@ for i = 1:length(simulated_loc)
     percent_naxon(i) = sum(percent_naxon_temp(row_headings(:,1)==i, :), 'all');
 end
 
-report.row_headings = row_headings;
-report.col_headings = col_headings;
-report.certainty = certainty;
+report.row_headings   = row_headings;
+report.col_headings   = col_headings;
+report.certainty      = certainty;
 report.percent_family = percent_family;
-report.percent_naxon = percent_naxon;
+report.percent_naxon  = percent_naxon;
 report.match_accuracy = match_accuracy;
 report.correctly_identified_sp = correctly_identified_sp;
-report.filename_sim = filename_sim;
+report.filename_sim    = filename_sim;
 report.filename_extrac = filename_extrac;
 
 % for naxon = 1:length(sim_shape_family)
